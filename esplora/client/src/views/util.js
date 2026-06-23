@@ -28,14 +28,19 @@ export const formatAssetAmount = (value, precision=0, t) =>
     {formatNumber(precision > 0 ? moveDec(value, -precision) : value, precision)}
   </span>
 
-export const formatOutAmount = (vout, { t, assetMap }, shortDisplay=false) => {
+export const formatOutAmount = (vout, { t, assetMap, prices }, shortDisplay=false) => {
   if (vout.value == null) return t`Confidential`
+
+  // SEQUENTIA: a "≈ <ref>" suffix in the user-chosen reference currency (empty if unpriced).
+  const refEl = refValueEl(vout.asset, vout.value, assetMap, prices)
+      , ref = refEl ? <span>{' '}{refEl}</span> : ''
 
   if (isNativeOut(vout)) {
     return <span>
       {formatNumber(sat2btc(vout.value), NATIVE_PRECISION)}
       { ' ' }
       {!vout.asset ? nativeAssetLabel : <a href={`asset/${vout.asset}`}>{nativeAssetLabel}</a>}
+      {ref}
     </span>
   }
 
@@ -47,9 +52,10 @@ export const formatOutAmount = (vout, { t, assetMap }, shortDisplay=false) => {
   const amount_el = formatAssetAmount(vout.value, precision, t)
       , asset_link = vout.asset && <a href={asset_url}>{short_id}</a>
 
-  return domain ? <span>{amount_el} {ticker && <span title={name}>{ticker}</span>} {shortDisplay||<br />} {domain}{shortDisplay || [<br/>,<em title={vout.asset}>{asset_link}</em>]}</span>
-       : vout.asset ? <span>{amount_el} <em title={vout.asset}>{asset_link}</em></span>
-       : <span>{amount_el} {t`Unknown`}</span> // should never happen
+  const out = domain ? <span>{amount_el} {ticker && <span title={name}>{ticker}</span>} {shortDisplay||<br />} {domain}{shortDisplay || [<br/>,<em title={vout.asset}>{asset_link}</em>]}</span>
+            : vout.asset ? <span>{amount_el} <em title={vout.asset}>{asset_link}</em></span>
+            : <span>{amount_el} {t`Unknown`}</span> // should never happen
+  return ref ? <span>{out}{ref}</span> : out
 }
 
 // SEQUENTIA: format a raw (asset, value) pair as a compact "amount TICKER" string,
@@ -87,6 +93,51 @@ export const formatFeeRate = rate =>
 // single asset misleads; show them all compactly, e.g. "1,000 USDX, 0.5 tSEQ".
 export const formatAssetValues = (outValues, assetMap = {}) =>
   outValues.map(v => formatAssetValue(v.asset, v.value, assetMap)).join(', ')
+
+// ----- reference-currency valuation (explorer-wide, user-chosen denomination) -----
+// SEQUENTIA: value any displayed amount in a denomination the user picks (USD, BTC, or
+// any priced asset) — chosen via the navbar picker, persisted in localStorage. Prices come
+// from /prices (per-asset base/USD price); value = amount * price[asset] / price[ref].
+// Display-only: an absent feed or an unpriced asset simply renders no "≈".
+export const REF = (typeof localStorage !== 'undefined' && localStorage.getItem('seqRefCcy')) || 'USD'
+const priceTickerFor = (asset, assetMap) =>
+  (!asset || asset === nativeAssetId) ? 'SEQ'                                   // native tSEQ is priced as SEQ
+  : ((assetMap && assetMap[asset] && assetMap[asset][1]) || '').toUpperCase()   // registry ticker
+const refUnitPrice = (prices, ref) => ref === 'USD' ? 1 : (prices && prices[ref === 'BTC' ? 'WBTC' : ref]) || null
+const refPrecisionOf = (asset, assetMap) =>
+  (!asset || asset === nativeAssetId) ? NATIVE_PRECISION
+  : ((assetMap && assetMap[asset] && assetMap[asset][3] != null) ? assetMap[asset][3] : DEFAULT_ISSUED_PRECISION)
+const refValueNum = (asset, value, assetMap, prices) => {
+  if (value == null || !prices) return null
+  const pu = prices[priceTickerFor(asset, assetMap)], pr = refUnitPrice(prices, REF)
+  if (!(pu > 0) || !(pr > 0)) return null
+  return (Number(value) / Math.pow(10, refPrecisionOf(asset, assetMap))) * pu / pr
+}
+const fmtRef = v => {
+  if (v == null) return ''
+  const dp = REF === 'BTC' ? 8 : (Math.abs(v) >= 1 ? 2 : 6)
+  return '≈ ' + v.toLocaleString(undefined, { maximumFractionDigits: dp }) + ' ' + REF
+}
+// a muted "≈ X REF" span (inline-styled so it needs no stylesheet), or '' if unpriced.
+const refSpan = str => str ? <span className="ref-value" style={{ opacity: '0.7', fontSize: '0.85em', whiteSpace: 'nowrap' }}>{str}</span> : ''
+// "≈ X REF" for a single (asset, sats) pair.
+export const refValueStr = (asset, value, assetMap, prices) => fmtRef(refValueNum(asset, value, assetMap, prices))
+export const refValueEl  = (asset, value, assetMap, prices) => refSpan(refValueStr(asset, value, assetMap, prices))
+// "≈ X REF" for the SUM of a list of {asset,value} (mixed assets), or '' if none priced.
+export const refValueOfListStr = (outValues, assetMap, prices) => {
+  if (!outValues || !prices) return ''
+  let sum = 0, any = false
+  for (const o of outValues) { const v = refValueNum(o.asset, o.value, assetMap, prices); if (v != null) { sum += v; any = true } }
+  return any ? fmtRef(sum) : ''
+}
+export const refValueOfListEl = (outValues, assetMap, prices) => refSpan(refValueOfListStr(outValues, assetMap, prices))
+// reference options for the navbar picker: USD + every priced asset (WBTC shown as BTC), incl. current.
+export const refOptions = prices => {
+  const s = new Set(['USD'])
+  if (prices) for (const k of Object.keys(prices)) s.add(k === 'WBTC' ? 'BTC' : k)
+  s.add(REF)
+  return [...s]
+}
 
 // SEQUENTIA: per-asset totals of a full tx's EXPLICIT outputs (for the detail view), excluding
 // the fee output and any blinded output. Mirrors the backend's `out_values` (overview), so a tx

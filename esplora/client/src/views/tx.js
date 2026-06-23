@@ -4,7 +4,7 @@ import vinView from './tx-vin'
 import voutView from './tx-vout'
 import privacyAnalysisView from './tx-privacy-analysis'
 import segwitGainsView from './tx-segwit-gains'
-import { formatSat, formatTime, formatVMB, formatNumber, formatAssetValue, formatAssetValues, explicitOutValues, tickerOf, formatFeeRate } from './util'
+import { formatSat, formatTime, formatVMB, formatNumber, formatAssetValue, formatAssetValues, explicitOutValues, tickerOf, formatFeeRate, refValueStr, refValueEl, refValueOfListEl } from './util'
 import { isAllUnconfidential, isAllNative, isRbf, outTotal, updateQuery } from '../util'
 import { nativeAssetId } from '../const'
 
@@ -90,7 +90,10 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S
               // blinded change. Only fully-blinded txs (no explicit non-fee output) read Confidential.
               if (process.env.IS_ELEMENTS) {
                 const ovs = explicitOutValues(tx.vout)
-                return ovs.length ? formatAssetValues(ovs, S.assetMap) : t`Confidential`
+                if (!ovs.length) return t`Confidential`
+                // SEQUENTIA: headline value + a single "≈ <ref>" total in the chosen reference.
+                const refEl = refValueOfListEl(ovs, S.assetMap, S.prices)
+                return <span>{formatAssetValues(ovs, S.assetMap)}{refEl && [' ', refEl]}</span>
               }
               return !isAllUnconfidential(tx) ? t`Confidential`
                    : isAllNative(tx)          ? formatSat(outTotal(tx))
@@ -113,7 +116,7 @@ const btnDetailsContent = (isOpen, t) =>
     <div className={isOpen?'minus':'plus'}></div>
   </div>
 
-const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap
+const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices
                       , txAnalysis: { feerate, mempoolDepth, confEstimate, overpaying, privacyAnalysis, segwitGains } }) => {
 
   // SEQUENTIA: fees may be paid in any asset (open fee market). The native-only
@@ -126,6 +129,7 @@ const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap
       , feeNative = !feeAsset || feeAsset === nativeAssetId
       , feeRatePerVb = tx.weight ? feeAmount / Math.ceil(tx.weight / 4) : null
       , showFee = process.env.IS_ELEMENTS ? feeAmount != null : feerate != null
+      , feeRefEl = process.env.IS_ELEMENTS ? refValueEl(feeAsset, feeAmount, assetMap, prices) : ''   // SEQUENTIA: fee in chosen reference
 
   return (
   <div className="stats-table font-p2">
@@ -164,6 +168,7 @@ const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap
             ? t`${formatSat(tx.fee)} (${feerate.toFixed(2)} sat/vB)`
             : t`${formatAssetValue(feeAsset, feeAmount, assetMap)} (${formatFeeRate(feeRatePerVb)} ${tickerOf(feeAsset, assetMap)}/vB)`
         }</span>
+        {feeRefEl && <span>{' '}{feeRefEl}</span>}
         { (!process.env.IS_ELEMENTS || feeNative) && overpaying > OVERPAYMENT_WARN &&
           <p className={`text-${ overpaying > OVERPAYMENT_WARN*1.5 ? 'danger' : 'warning' } mb-0`} title={t`compared to the suggested fee of ${feeEst[2].toFixed(1)} sat/vB for confirmation within 2 blocks`}>
             ⓘ {t`overpaying by ${Math.round((overpaying-1)*100)}%`}

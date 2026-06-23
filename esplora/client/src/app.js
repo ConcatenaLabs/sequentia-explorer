@@ -27,9 +27,9 @@ import l10n, { defaultLang } from './l10n'
 import * as views from './views'
 
 const apiBase = (process.env.API_URL || '/api').replace(/\/+$/, '')
-    // '/registry/...' is the Asset Registry mount (origin-absolute), not an electrs
-    // API path — pass it through instead of prefixing apiBase (which would 404).
-    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') || path.startsWith('/registry') ? path : apiBase + path })
+    // '/registry/...' (Asset Registry) and '/prices' (market-data feed) are origin-absolute
+    // mounts, not electrs API paths — pass them through instead of prefixing apiBase (404).
+    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') || path.startsWith('/registry') || path.startsWith('/prices') ? path : apiBase + path })
 
 const reservedPaths = [ 'mempool', 'assets', 'search' ]
     , NEW_TABLE_ENTRY_MS = 2000
@@ -271,6 +271,14 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
         // use an empty object if the map fails loading for any reason
         .merge(extractErrors(HTTP.select('asset-map')).mapTo({}))
 
+  // SEQUENTIA: market-data prices ({UPPER_TICKER: base/USD price}) for the user-chosen
+  // reference-currency valuation. Flattened from /prices ({TICKER:{price,...}}); an empty
+  // map on failure so the app still renders (no "≈"). combine() starts it at null.
+  , prices$ = !process.env.IS_ELEMENTS ? O.of({}) :
+      reply('prices')
+        .map(d => { const m = {}; for (const k in d) { const v = d[k], p = (v && typeof v === 'object') ? v.price : v; if (p > 0) m[k.toUpperCase()] = p } return m })
+        .merge(extractErrors(HTTP.select('prices')).mapTo({}))
+
   // Assets List State
   , assetList$ = !process.env.IS_ELEMENTS ? O.empty() :
       reply('assetlist', true).map(r => ({ assets: r.body, total: r.headers['x-total-results'] || 493 }))
@@ -317,7 +325,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$
                      , goAddr$, addr$, addrTxs$, addrQR$
-                     , assetMap$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
+                     , assetMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
                      })
 
@@ -409,6 +417,10 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     , !process.env.ASSET_MAP_URL ? O.empty() : O.of(
                                 { category: 'asset-map',  method: 'GET', path: process.env.ASSET_MAP_URL, bg: true })
 
+    // SEQUENTIA: fetch market-data prices once on load, for reference-currency valuation
+    , !process.env.IS_ELEMENTS ? O.empty() : O.of(
+                                { category: 'prices',     method: 'GET', path: '/prices', bg: true })
+
     // fetch asset list
     , goAssetList$.map(d => ({ category: 'assetlist',  method: 'GET', path: '/assets/registry'
           , query: { sort_field: d.sort_field, sort_dir: d.sort_dir, limit: d.limit, start_index: d.start_index } }))
@@ -454,6 +466,13 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
     // Click-to-copy
     if (navigator.clipboard) copy$.subscribe(text => navigator.clipboard.writeText(text))
+
+    // SEQUENTIA: reference-currency picker (navbar) — persist the choice and reload so
+    // every displayed amount re-denominates into it (REF is read at module load).
+    on('#refCcySel', 'change').subscribe(e => {
+      try { localStorage.setItem('seqRefCcy', e.ownerTarget.value) } catch (_) {}
+      location.reload()
+    })
 
     // Switch stylesheet based on current language
     const stylesheet = document.querySelector('link[href="style.css"]')

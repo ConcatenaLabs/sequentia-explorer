@@ -1,4 +1,4 @@
-import { formatSat, formatNumber, truncateTxid, formatAssetValue, formatAssetValues, tickerOf, formatFeeRate } from "./util";
+import { formatSat, formatNumber, truncateTxid, formatAssetValue, formatAssetValues, tickerOf, formatFeeRate, refValueOfListEl } from "./util";
 import { nativeAssetId } from "../const";
 import loader from "../components/loading";
 import { CopyIcon, TxArrowsIcon } from "../components/icons";
@@ -21,12 +21,15 @@ const feeRateClass = (feerate, feeEst) => {
 // open fee market). Only print "Confidential" when there are NO explicit outputs at all: a
 // blinded CHANGE output alongside an explicit payment must not hide the known payment.
 // The Bitcoin build (no `out_values`) keeps the original single-value behaviour.
-const renderTxValue = (txo, assetMap) => {
+const renderTxValue = (txo, S) => {
+  const assetMap = S.assetMap
   if (txo.out_values === undefined) {
     return txo.value != null ? formatSat(txo.value) : "Confidential";
   }
   if (!txo.out_values.length) return txo.confidential ? "Confidential" : "—";
-  return formatAssetValues(txo.out_values, assetMap);
+  // SEQUENTIA: the mixed-asset value, plus a single "≈ <ref>" total in the chosen reference.
+  const refEl = refValueOfListEl(txo.out_values, assetMap, S.prices);
+  return <span>{formatAssetValues(txo.out_values, assetMap)}{refEl && [<br/>, refEl]}</span>;
 }
 
 // SEQUENTIA: the FEE column. Fees may be paid in any asset (open fee market). Keep
@@ -88,7 +91,7 @@ export const transactions = (txs, viewMore, { t, ...S }) => (
                   </div>
                 </div>
                 <div className="transaction-table-transaction-value">
-                  {renderTxValue(txOverview, S.assetMap)}
+                  {renderTxValue(txOverview, S)}
                 </div>
                 <div className="transaction-table-transaction-size">{`${formatNumber(txOverview.vsize)} vB`}</div>
                 <div className={`transaction-table-transaction-fee ${feeClass}`}>{renderTxFee(txOverview, S.assetMap)}</div>

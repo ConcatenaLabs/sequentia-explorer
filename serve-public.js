@@ -16,6 +16,7 @@ const DIST = path.join(__dirname, 'esplora', 'dist')
 const SEQ_ELECTRS = process.env.SEQ_ELECTRS || '127.0.0.1:3003'
 const T4_ELECTRS = process.env.T4_ELECTRS || '127.0.0.1:3004'
 const SEQ_REGISTRY = process.env.SEQ_REGISTRY || '127.0.0.1:3005' // Sequentia Asset Registry
+const SEQ_PRICES = process.env.SEQ_PRICES || '127.0.0.1:8088'      // market-data feed (per-asset base prices)
 const PORT = process.env.PORT || 8080
 // Optional release-artifact downloads served at /download (Linux tarball,
 // Windows installer, landing page). Defaults to ./downloads next to this file.
@@ -89,6 +90,11 @@ app.use('/api', proxyTo(SEQ_ELECTRS))
 // Sequentia Asset Registry (asset metadata). Mount strips /registry, so the
 // upstream sees /index.minimal.json, /<assetid>, /health, POST /, etc.
 app.use('/registry', proxyTo(SEQ_REGISTRY))
+
+// Market-data feed (per-asset base/USD prices), used by all UIs for the
+// user-chosen reference-currency valuation. A direct route (not a mount) so the
+// path is NOT stripped: GET /prices -> upstream /prices. Public, read-only.
+app.get('/prices', proxyTo(SEQ_PRICES))
 
 // Release-artifact downloads + landing page (before the SPA fallback so
 // /download/* is served from DOWNLOAD_DIR, not the esplora index.html).

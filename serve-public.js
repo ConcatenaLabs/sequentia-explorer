@@ -191,25 +191,43 @@ app.get('/feerates', (req, res) => {
 const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sequentia — testnet demo server</title>
+<link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
 <style>
-  :root{color-scheme:light dark}
+  :root{color-scheme:dark}
   body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1216;color:#e8eaed;display:flex;min-height:100vh;align-items:center;justify-content:center}
   .wrap{max-width:720px;padding:48px 24px;width:100%}
-  h1{font-size:30px;margin:0 0 4px} .sub{color:#9aa0a6;margin:0 0 32px}
+  .brand{display:flex;align-items:center;gap:14px;margin:0 0 8px}
+  .brand img{height:52px;width:52px}
+  h1{font-size:30px;margin:0} h1 .t{color:#f5b301}
+  .sub{color:#9aa0a6;margin:0 0 32px}
   .grid{display:grid;gap:16px}
   a.card{display:block;text-decoration:none;color:inherit;background:#171b21;border:1px solid #262b33;border-radius:12px;padding:20px 22px;transition:border-color .15s,transform .05s}
-  a.card:hover{border-color:#3b82f6;transform:translateY(-1px)}
+  a.card:hover{border-color:#f5b301;transform:translateY(-1px)}
   .card h2{margin:0 0 4px;font-size:19px;color:#fff} .card p{margin:0;color:#9aa0a6;font-size:14px}
-  footer{margin-top:28px;color:#6b7280;font-size:13px}
+  footer{margin-top:32px;border-top:1px solid #262b33;padding-top:20px;color:#6b7280;font-size:13px}
+  .by{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .by span{color:#9aa0a6} .by a{color:#f5b301;text-decoration:none} .by a:hover{text-decoration:underline}
+  .by img{height:18px;width:auto;vertical-align:middle;opacity:.92}
 </style></head><body><div class="wrap">
-  <h1>Sequentia <span style="color:#3b82f6">testnet</span></h1>
+  <div class="brand">
+    <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
+    <h1>Sequentia <span class="t">testnet</span></h1>
+  </div>
   <p class="sub">A Bitcoin sidechain — real-time anchoring, a BLS proof-of-stake committee, and an open any-asset fee market. This is the public demo server.</p>
   <div class="grid">
     <a class="card" href="/explorer/"><h2>Block Explorer →</h2><p>Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).</p></a>
     <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
     <a class="card" href="/download/"><h2>Downloads →</h2><p>Full node + desktop GUI for Linux and Windows.</p></a>
   </div>
-  <footer>Testnet only — assets carry no value.</footer>
+  <footer>
+    <div class="by">
+      <span>Built by</span>
+      <a href="https://concatenalabs.com" target="_blank" rel="noopener"><img src="/explorer/img/icons/concatena-labs.png" alt="Concatena Labs"></a>
+      <span>·</span>
+      <a href="https://sequentia.io" target="_blank" rel="noopener">sequentia.io</a>
+    </div>
+    Testnet only — assets carry no value.
+  </footer>
 </div></body></html>`;
 
 // Greeting page at the site root.

@@ -29,7 +29,7 @@ head
       d.setAttribute('data-seq-theme', p==='auto'?((window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark'):p);
       d.setAttribute('data-seq-font', ls.getItem('seqFont')||'system');
       d.setAttribute('data-seq-textsize', ls.getItem('seqTextSize')||'normal'); } catch(e){}
-  link(rel='shortcut icon', type='image/png', href=staticRoot+'img/favicon.png')
+  link(rel='shortcut icon', href=staticRoot + (process.env.FAVICON || 'img/favicon.png'))
   link(rel='stylesheet', href=staticRoot+cssPath)
 
   if process.env.CANONICAL_URL

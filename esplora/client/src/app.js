@@ -31,7 +31,7 @@ const apiBase = (process.env.API_URL || '/api').replace(/\/+$/, '')
     // mounts, not electrs API paths — pass them through instead of prefixing apiBase (404).
     , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') || path.startsWith('/registry') || path.startsWith('/prices') ? path : apiBase + path })
 
-const reservedPaths = [ 'mempool', 'assets', 'search' ]
+const reservedPaths = [ 'mempool', 'assets', 'search', 'settings' ]
     , NEW_TABLE_ENTRY_MS = 2000
 
 // Make driver source observables rxjs5-compatible via rxjs-compat

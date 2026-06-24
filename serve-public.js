@@ -37,11 +37,26 @@ const FAUCET_COOLDOWN_MS = Number(process.env.FAUCET_COOLDOWN_MS || 3600000)
 const FAUCET_ADDR_RE = /^(tb1|tsqb1)[ac-hj-np-z02-9]{20,180}$/   // bech32/blech32 data charset
 const faucetSeen = new Map()                                    // key -> last-served epoch ms
 const faucetTooSoon = k => { const t = faucetSeen.get(k); return t && (Date.now() - t) < FAUCET_COOLDOWN_MS }
+// Evict faucetSeen entries older than the cooldown so the map can't grow
+// unbounded (one key per address/IP per asset would otherwise accumulate forever).
+setInterval(() => {
+  const cutoff = Date.now() - FAUCET_COOLDOWN_MS
+  for (const [k, t] of faucetSeen) if (t < cutoff) faucetSeen.delete(k)
+}, FAUCET_COOLDOWN_MS).unref()
 // Broadcast forwarding (see below): the PoS committee mesh doesn't relay externally-
 // submitted txs to producers, so we push raw Sequentia txs straight to a producer.
+// One or more producers to forward to (comma-separated datadirs). The first is
+// the primary used by POST /api/tx; the backstop forwards to all of them.
 const PRODUCER_DATADIR = process.env.PRODUCER_DATADIR || '/root/seq-testnet/node000'
+const PRODUCER_DATADIRS = (process.env.PRODUCER_DATADIRS || PRODUCER_DATADIR)
+  .split(',').map(s => s.trim()).filter(Boolean)
 const BROADCAST_DATADIR = process.env.BROADCAST_DATADIR || '/root/sequentia/explorer-node'
 const TXHEX_RE = /^[0-9a-fA-F]{2,400000}$/
+const TXID_RE = /^[0-9a-f]{64}$/i
+// Backstop: cap how many times a single tx is re-forwarded before we give up,
+// so a permanently-unacceptable tx isn't retried forever (and the map evicted).
+const BACKSTOP_MAX_ATTEMPTS = Number(process.env.BACKSTOP_MAX_ATTEMPTS || 30)
+const backstopAttempts = new Map()                                // txid -> attempt count
 
 const proxyTo = target => {
   const [host, port] = target.split(':')
@@ -59,6 +74,9 @@ const proxyTo = target => {
 
 const app = express()
 app.disable('x-powered-by')
+// One trusted hop (the TLS terminator / Tailscale Funnel in front of us): trust
+// exactly one proxy so req.ip is the real client, not a spoofable X-Forwarded-For.
+app.set('trust proxy', 1)
 
 // API proxies first (the /testnet4 prefix is stripped by the mount, so the
 // upstream electrs sees /blocks/... etc). Order matters: /testnet4/api before /api.
@@ -75,13 +93,31 @@ app.post('/api/tx', express.text({ type: () => true, limit: '500kb' }), (req, re
   const rawhex = String(req.body || '').trim()
   if (!TXHEX_RE.test(rawhex)) return res.status(400).type('text').send('invalid transaction hex')
   const send = (dd, cb) => execFile(FAUCET_CLI, ['-datadir=' + dd, 'sendrawtransaction', rawhex], { timeout: 25000 }, cb)
-  send(PRODUCER_DATADIR, (err, stdout, stderr) => {
-    send(BROADCAST_DATADIR, () => {})                                  // best-effort: index on the explorer node too
-    const out = String(stdout || '').trim()
-    const emsg = String(stderr || (err && err.message) || '')
-    if (/^[0-9a-f]{64}$/i.test(out)) return res.type('text').send(out)                          // accepted -> txid
-    if (/already in (block chain|mempool)|txn-already/i.test(emsg)) return res.type('text').send(out)  // benign re-broadcast
-    res.status(400).type('text').send(emsg.trim().split('\n').pop() || 'broadcast failed')
+  // Recover the txid of the submitted hex without relying on stdout (the
+  // "already in block chain" branch returns an empty stdout) and without parsing
+  // the error string (it has none). The explorer node already has the tx, so
+  // decoderawtransaction of the submitted hex yields the canonical txid.
+  const recoverTxid = cb => execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'decoderawtransaction', rawhex],
+    { timeout: 10000 }, (e, so) => {
+      if (e) return cb(null)
+      let d; try { d = JSON.parse(so) } catch { return cb(null) }
+      cb(d && TXID_RE.test(String(d.txid || '')) ? String(d.txid) : null)
+    })
+  // Succeed if EITHER the producer or the explorer node accepts the tx. Capture
+  // the explorer-node result (don't drop it on a no-op callback).
+  let replied = false
+  const reply = (status, body) => { if (replied) return; replied = true; res.status(status).type('text').send(body) }
+  send(PRODUCER_DATADIR, (perr, pstdout, pstderr) => {
+    send(BROADCAST_DATADIR, (berr, bstdout, bstderr) => {
+      const pout = String(pstdout || '').trim()
+      const bout = String(bstdout || '').trim()
+      const out = TXID_RE.test(pout) ? pout : (TXID_RE.test(bout) ? bout : '')
+      const emsg = String(pstderr || (perr && perr.message) || bstderr || (berr && berr.message) || '')
+      if (out) return reply(200, out)                                  // accepted by either -> txid
+      if (/already in (block chain|mempool)|txn-already/i.test(emsg))  // benign re-broadcast: recover the txid
+        return recoverTxid(txid => txid ? reply(200, txid) : reply(400, 'broadcast accepted but txid unavailable'))
+      reply(400, emsg.trim().split('\n').pop() || 'broadcast failed')
+    })
   })
 })
 
@@ -116,7 +152,9 @@ app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
     return res.status(400).json({ error: 'Unknown faucet asset.' })
   const unit = asset || 'tSEQ'
   const amount = asset ? FAUCET_ASSETS[asset] : FAUCET_AMOUNT
-  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim()
+  // req.ip is the trusted client IP (trust proxy=1 above): the single hop's
+  // X-Forwarded-For, falling back to the socket address — not user-spoofable.
+  const ip = String(req.ip || req.socket.remoteAddress || '').trim()
   if (faucetTooSoon('a:' + unit + ':' + address) || faucetTooSoon('i:' + unit + ':' + ip))
     return res.status(429).json({ error: 'Already funded recently — please wait before requesting again.' })
   const args = ['-datadir=' + FAUCET_DATADIR, '-rpcwallet=' + FAUCET_WALLET, '-named', 'sendtoaddress',
@@ -163,11 +201,25 @@ setInterval(() => {
   execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawmempool', 'true'], { timeout: 15000 }, (err, stdout) => {
     if (err) return
     let m; try { m = JSON.parse(stdout) } catch { return }
+    const live = new Set(Object.keys(m))
+    // Evict bookkeeping for txs that have left the mempool (mined or dropped).
+    for (const txid of backstopAttempts.keys()) if (!live.has(txid)) backstopAttempts.delete(txid)
     for (const [txid, info] of Object.entries(m)) {
       if (!info || !info.unbroadcast) continue
+      const attempts = backstopAttempts.get(txid) || 0
+      if (attempts >= BACKSTOP_MAX_ATTEMPTS) {                          // give up: likely permanently unacceptable
+        if (attempts === BACKSTOP_MAX_ATTEMPTS) {                       // log once, then stop touching it
+          console.warn(`backstop: dropping ${txid} after ${attempts} forward attempts`)
+          backstopAttempts.set(txid, attempts + 1)
+        }
+        continue
+      }
+      backstopAttempts.set(txid, attempts + 1)
       execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawtransaction', txid], { timeout: 15000 }, (e, hex) => {
         if (e || !hex) return
-        execFile(FAUCET_CLI, ['-datadir=' + PRODUCER_DATADIR, 'sendrawtransaction', String(hex).trim()], { timeout: 20000 }, () => {})
+        const raw = String(hex).trim()
+        for (const dd of PRODUCER_DATADIRS)                             // forward to every configured producer
+          execFile(FAUCET_CLI, ['-datadir=' + dd, 'sendrawtransaction', raw], { timeout: 20000 }, () => {})
       })
     }
   })

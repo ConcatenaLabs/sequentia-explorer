@@ -215,10 +215,8 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
 // Greeting page at the site root.
 app.get('/', (req, res) => res.type('html').send(LANDING_HTML))
 
-// Redirect the bare /explorer to /explorer/ so the SPA base + relative assets resolve.
-app.get('/explorer', (req, res) => res.redirect(301, '/explorer/'))
-
-// Static assets (serves dist/explorer/**, dist/testnet4/**).
+// Static assets (serves dist/explorer/**, dist/testnet4/**). express.static itself redirects the
+// bare /explorer -> /explorer/ and serves dist/explorer/index.html for /explorer/.
 app.use(express.static(DIST))
 
 // SPA fallbacks: client-side routes (e.g. /explorer/block/<hash>) -> the right index.html.

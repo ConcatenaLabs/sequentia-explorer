@@ -187,12 +187,44 @@ app.get('/feerates', (req, res) => {
     })
 })
 
-// Static assets (serves dist/** including dist/testnet4/**).
+// Landing / greeting page for the Sequentia demo server: lists what's available.
+const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sequentia — testnet demo server</title>
+<style>
+  :root{color-scheme:light dark}
+  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1216;color:#e8eaed;display:flex;min-height:100vh;align-items:center;justify-content:center}
+  .wrap{max-width:720px;padding:48px 24px;width:100%}
+  h1{font-size:30px;margin:0 0 4px} .sub{color:#9aa0a6;margin:0 0 32px}
+  .grid{display:grid;gap:16px}
+  a.card{display:block;text-decoration:none;color:inherit;background:#171b21;border:1px solid #262b33;border-radius:12px;padding:20px 22px;transition:border-color .15s,transform .05s}
+  a.card:hover{border-color:#3b82f6;transform:translateY(-1px)}
+  .card h2{margin:0 0 4px;font-size:19px;color:#fff} .card p{margin:0;color:#9aa0a6;font-size:14px}
+  footer{margin-top:28px;color:#6b7280;font-size:13px}
+</style></head><body><div class="wrap">
+  <h1>Sequentia <span style="color:#3b82f6">testnet</span></h1>
+  <p class="sub">A Bitcoin sidechain — real-time anchoring, a BLS proof-of-stake committee, and an open any-asset fee market. This is the public demo server.</p>
+  <div class="grid">
+    <a class="card" href="/explorer/"><h2>Block Explorer →</h2><p>Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).</p></a>
+    <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
+    <a class="card" href="/download/"><h2>Downloads →</h2><p>Full node + desktop GUI for Linux and Windows.</p></a>
+  </div>
+  <footer>Testnet only — assets carry no value.</footer>
+</div></body></html>`;
+
+// Greeting page at the site root.
+app.get('/', (req, res) => res.type('html').send(LANDING_HTML))
+
+// Redirect the bare /explorer to /explorer/ so the SPA base + relative assets resolve.
+app.get('/explorer', (req, res) => res.redirect(301, '/explorer/'))
+
+// Static assets (serves dist/explorer/**, dist/testnet4/**).
 app.use(express.static(DIST))
 
-// SPA fallbacks: client-side routes (e.g. /block/<hash>) -> the right index.html.
+// SPA fallbacks: client-side routes (e.g. /explorer/block/<hash>) -> the right index.html.
+app.get('/explorer/*', (req, res) => res.sendFile(path.join(DIST, 'explorer', 'index.html')))
 app.get('/testnet4/*', (req, res) => res.sendFile(path.join(DIST, 'testnet4', 'index.html')))
-app.get('*', (req, res) => res.sendFile(path.join(DIST, 'index.html')))
+app.get('*', (req, res) => res.redirect('/')) // unknown path -> greeting
 
 // Backstop: every 20s, forward any still-unbroadcast tx in the explorer node's mempool to
 // a producer, so nothing sits unmined even if it arrived before this server started or via

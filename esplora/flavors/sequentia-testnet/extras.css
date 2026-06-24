@@ -80,7 +80,7 @@
 .network-selector-toggle .menu-logo { height: 18px; width: 18px; }
 .network-selector-toggle .network-angle-down { fill: var(--primary-color); opacity: 0.8; }
 
-/* The dropdown: a small dark "you are here ⚓ its parent" card. */
+/* The dropdown: a small dark "you are here / its parent" card. */
 .network-hover-menu {
   background: var(--seq-dark);
   border-radius: 12px;
@@ -110,11 +110,72 @@
 }
 .network-hover-menu-option-container.active .network-hover-menu-option { color: var(--chain); }
 
-/* "anchored to" connector: the Sequentia (child) option carries an anchor glyph,
-   naming the relationship to its Bitcoin parent. */
-.network-hover-menu-option-container.sequentiatestnet::after {
-  content: "\2693";                 /* ⚓ anchored into Bitcoin */
-  margin-left: auto;
-  font-size: 13px;
-  color: color-mix(in srgb, var(--seq-amber) 70%, #888);
+/* ============================================================================
+   SEQUENTIA local display settings (the Settings page; stored per-browser).
+   The explorer is dark by default, so "light" is an override and "auto" is
+   resolved to light|dark in app.js (data-seq-theme carries the EFFECTIVE value).
+   ============================================================================ */
+
+/* ---- Font family (default = the brand font, Inter; override only on request) */
+html[data-seq-font="sans"]  body { font-family: "Inter", system-ui, Arial, sans-serif; }
+html[data-seq-font="serif"] body { font-family: Georgia, "Times New Roman", Times, serif; }
+html[data-seq-font="mono"]  body { font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace; }
+
+/* ---- Text size: zoom the whole explorer so fixed-px elements scale too. ---- */
+html[data-seq-textsize="sm"] .explorer-container { zoom: 0.92; }
+html[data-seq-textsize="lg"] .explorer-container { zoom: 1.12; }
+html[data-seq-textsize="xl"] .explorer-container { zoom: 1.25; }
+
+/* ---- Settings page layout ---- */
+.settings-page { max-width: 760px; margin: 1.5rem auto 3rem; }
+.settings-page h1 { margin-bottom: .4rem; }
+.settings-page .set-intro { margin: 0 0 1.3rem; max-width: 62ch; }
+.settings-card {
+  background: #1f1f22;
+  border: 1px solid color-mix(in srgb, #ffffff 9%, transparent);
+  border-radius: 12px;
+  padding: 0 1.2rem;
 }
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid color-mix(in srgb, #ffffff 8%, transparent);
+}
+.set-row:last-child { border-bottom: none; }
+.set-label { flex: 1 1 auto; min-width: 0; }
+.set-name { font-weight: 600; margin-bottom: .2rem; }
+.set-hint { font-size: .85rem; line-height: 1.4; }
+.set-control { flex: 0 0 auto; }
+.set-control select { min-width: 230px; padding: .45rem .6rem; border-radius: 8px; cursor: pointer; }
+@media (max-width: 640px) {
+  .set-row { flex-direction: column; align-items: stretch; gap: .55rem; }
+  .set-control select { width: 100%; min-width: 0; }
+}
+
+/* ---- Light theme: best-effort flip of the principal dark surfaces. --------- */
+html[data-seq-theme="light"] body { background: #f4f5f7; color: #1a1c1f; }
+html[data-seq-theme="light"] .explorer-main,
+html[data-seq-theme="light"] .nav-container,
+html[data-seq-theme="light"] .sub-navbar,
+html[data-seq-theme="light"] .stats-table,
+html[data-seq-theme="light"] table,
+html[data-seq-theme="light"] .box,
+html[data-seq-theme="light"] .settings-card,
+html[data-seq-theme="light"] footer,
+html[data-seq-theme="light"] .footer { background: #ffffff; color: #1a1c1f; }
+html[data-seq-theme="light"] .settings-card { border-color: #e6e8eb; }
+html[data-seq-theme="light"] .set-row { border-bottom-color: #ececef; }
+html[data-seq-theme="light"] td,
+html[data-seq-theme="light"] th { border-color: #e6e8eb; }
+html[data-seq-theme="light"] .text-gray,
+html[data-seq-theme="light"] .set-hint { color: #5a636b; }
+html[data-seq-theme="light"] a { color: #a87900; }
+html[data-seq-theme="light"] input,
+html[data-seq-theme="light"] select,
+html[data-seq-theme="light"] textarea,
+html[data-seq-theme="light"] pre,
+html[data-seq-theme="light"] code {
+  background: #f0f1f3; color: #1a1c1f; border: 1px solid #d6d9dd;
+}
+/* keep the brand chip dark (it's designed on black) */
+html[data-seq-theme="light"] .navbar-brand { background: var(--seq-dark); }

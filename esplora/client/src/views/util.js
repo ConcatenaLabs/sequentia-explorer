@@ -6,6 +6,26 @@ import { isNativeOut } from '../util'
 const DEFAULT_ISSUED_PRECISION = 0
     , NATIVE_PRECISION = 8
 
+// SEQUENTIA: local display preferences (chosen on the Settings page, persisted in
+// localStorage). Read once at module load; changing one persists + reloads (app.js)
+// so every displayed value re-renders consistently.
+const _ls = k => (typeof localStorage !== 'undefined' && localStorage.getItem(k)) || ''
+const NUMFMT = _ls('seqNumFmt') || 'plain'                          // plain | grouped | european
+const _GSEP  = ({ plain: '', grouped: ',', european: '.' })[NUMFMT] || ''   // thousands separator
+const _DSEP  = ({ plain: '.', grouped: '.', european: ',' })[NUMFMT] || '.' // decimal separator
+const groupDigits = whole => _GSEP ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, _GSEP) : whole
+// Format a JS number to <=maxdp decimals, strip trailing zeros, then apply the chosen
+// grouping + decimal separator. Used for the "≈ ref" values.
+const fmtDec = (num, maxdp) => {
+  if (num == null) return ''
+  let str = Number(num).toFixed(maxdp)
+  if (str.indexOf('.') >= 0) str = str.replace(/0+$/, '').replace(/\.$/, '')
+  let [ whole, dec ] = str.split('.'), sign = ''
+  if (whole[0] === '-') { sign = '-'; whole = whole.slice(1) }
+  return sign + groupDigits(whole) + (dec ? _DSEP + dec : '')
+}
+const DATE_UTC = _ls('seqDateUTC') === '1'                          // show times in UTC vs local
+
 const pad = n => n < 10 ? '0'+n : n
 
 const formatTimezone = time => {
@@ -15,10 +35,16 @@ const formatTimezone = time => {
 
 export const formatTime = (unix, with_tz = true) => {
   const time = new Date(unix*1000)
+  // SEQUENTIA: honour the Settings "show times in UTC" preference.
+  const Y  = DATE_UTC ? time.getUTCFullYear() : time.getFullYear()
+      , Mo = (DATE_UTC ? time.getUTCMonth() : time.getMonth()) + 1
+      , D  = DATE_UTC ? time.getUTCDate() : time.getDate()
+      , H  = DATE_UTC ? time.getUTCHours() : time.getHours()
+      , Mi = DATE_UTC ? time.getUTCMinutes() : time.getMinutes()
+      , Sx = DATE_UTC ? time.getUTCSeconds() : time.getSeconds()
 
-  return `${time.getFullYear()}-${pad(time.getMonth() + 1)}-${pad(time.getDate())}`
-       + ` ${pad(time.getHours())}:${pad(time.getMinutes())}:${pad(time.getSeconds())}`
-       + (with_tz ? ' ' + formatTimezone(time) : '')
+  return `${Y}-${pad(Mo)}-${pad(D)} ${pad(H)}:${pad(Mi)}:${pad(Sx)}`
+       + (with_tz ? ' ' + (DATE_UTC ? 'UTC' : formatTimezone(time)) : '')
 }
 
 export const formatSat = (sats, label=nativeAssetLabel) => `${formatNumber(sat2btc(sats), NATIVE_PRECISION)} ${label}`
@@ -116,7 +142,7 @@ const refValueNum = (asset, value, assetMap, prices) => {
 const fmtRef = v => {
   if (v == null) return ''
   const dp = REF === 'BTC' ? 8 : (Math.abs(v) >= 1 ? 2 : 6)
-  return '≈ ' + v.toLocaleString(undefined, { maximumFractionDigits: dp }) + ' ' + REF
+  return '≈ ' + fmtDec(v, dp) + ' ' + REF
 }
 // a muted "≈ X REF" span (inline-styled so it needs no stylesheet), or '' if unpriced.
 const refSpan = str => str ? <span className="ref-value" style={{ opacity: '0.7', fontSize: '0.85em', whiteSpace: 'nowrap' }}>{str}</span> : ''
@@ -131,12 +157,18 @@ export const refValueOfListStr = (outValues, assetMap, prices) => {
   return any ? fmtRef(sum) : ''
 }
 export const refValueOfListEl = (outValues, assetMap, prices) => refSpan(refValueOfListStr(outValues, assetMap, prices))
-// reference options for the navbar picker: USD + every priced asset (WBTC shown as BTC), incl. current.
+// reference options for the Settings picker. Canonical order: BTC, USD, SEQ first
+// (always shown), then every other priced asset from the registry, alphabetically.
+// WBTC is shown as BTC; the current selection is kept present even if unpriced.
 export const refOptions = prices => {
-  const s = new Set(['USD'])
-  if (prices) for (const k of Object.keys(prices)) s.add(k === 'WBTC' ? 'BTC' : k)
-  s.add(REF)
-  return [...s]
+  const head = ['BTC', 'USD', 'SEQ']
+  const rest = new Set()
+  if (prices) for (const k of Object.keys(prices)) {
+    const t = (k === 'WBTC' ? 'BTC' : k).toUpperCase()
+    if (!head.includes(t)) rest.add(t)
+  }
+  if (REF && !head.includes(REF)) rest.add(REF)
+  return [...head, ...[...rest].sort()]
 }
 
 // SEQUENTIA: per-asset totals of a full tx's EXPLICIT outputs (for the detail view), excluding
@@ -160,20 +192,16 @@ export const formatHex = num => {
 
 // Formats a number for display. Treats the number as a string to avoid rounding errors.
 export const formatNumber = (s, precision=null) => {
-  let [ whole, dec ] = s.toString().split('.')
-
-  // divide numbers into groups of three separated with a thin space (U+202F, "NARROW NO-BREAK SPACE"),
-  // but only when there are more than a total of 5 non-decimal digits.
-  // if (whole.length >= 5) {
-  //   whole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F")
-  // }
+  let [ whole, dec ] = s.toString().split('.'), sign = ''
+  if (whole[0] === '-') { sign = '-'; whole = whole.slice(1) }
 
   if (precision != null && precision > 0) {
     if (dec == null) dec = '0'.repeat(precision)
     else if (dec.length < precision) dec += '0'.repeat(precision - dec.length)
   }
 
-  return whole + (dec != null ? '.'+dec : '')
+  // SEQUENTIA: apply the Settings number format (thousands grouping + decimal mark).
+  return sign + groupDigits(whole) + (dec != null ? _DSEP + dec : '')
 }
 
 export const formatRelativeTime = (fromDate, toDate = new Date()) => {

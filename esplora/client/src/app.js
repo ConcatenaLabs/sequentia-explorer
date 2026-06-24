@@ -95,6 +95,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   , goPush$   = route('/tx/push')
   , goRecent$ = route('/tx/recent')
   , goScan$   = route('/scan-qr').mapTo(true)
+  , goSettings$= route('/settings')
   , goMempool$= route('/mempool')
   , goSearch$ = route('/search').map(loc => loc.query.q).filter(Boolean)
 
@@ -299,6 +300,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                   , asset$.filter(notNully).mapTo('asset')
                   , goPush$.mapTo('pushtx')
                   , goScan$.mapTo('scan')
+                  , goSettings$.mapTo('settings')
                   , goMempool$.mapTo('mempool')
                   , goAssetList$.mapTo('assetList')
                   , error$.mapTo('error'))
@@ -315,6 +317,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                    , goAssetList$.withLatestFrom(t$, (_, t) => t`Registered assets`)
                    , goPush$.withLatestFrom(t$, (_, t) => t`Broadcast transaction`)
                    , goMempool$.withLatestFrom(t$, (_, t) => t`Mempool`)
+                   , goSettings$.withLatestFrom(t$, (_, t) => t`Settings`)
                    , goRecent$.withLatestFrom(t$, (_, t) => t`Recent transactions`))
 
   // App state
@@ -467,12 +470,37 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     // Click-to-copy
     if (navigator.clipboard) copy$.subscribe(text => navigator.clipboard.writeText(text))
 
-    // SEQUENTIA: reference-currency picker (navbar) — persist the choice and reload so
-    // every displayed amount re-denominates into it (REF is read at module load).
-    on('#refCcySel', 'change').subscribe(e => {
-      try { localStorage.setItem('seqRefCcy', e.ownerTarget.value) } catch (_) {}
-      location.reload()
+    // SEQUENTIA: Settings page (views/settings.js). Reflect the locally-stored display
+    // preferences onto <html> as data-attributes so the stylesheet can theme/scale the
+    // whole explorer. Currency / number / time changes re-render on reload (those values
+    // are read at module load in util.js); theme / font / text-size apply live.
+    const applyDisplay = () => {
+      try {
+        const d = document.documentElement
+        // The explorer is dark by default; "auto" resolves to the OS preference,
+        // so we publish the EFFECTIVE theme (light|dark) and the CSS keys off that.
+        const pref = localStorage.getItem('seqTheme') || 'auto'
+        const eff = pref === 'auto'
+          ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+          : pref
+        d.setAttribute('data-seq-theme',    eff)
+        d.setAttribute('data-seq-font',     localStorage.getItem('seqFont')     || 'system')
+        d.setAttribute('data-seq-textsize', localStorage.getItem('seqTextSize') || 'normal')
+      } catch (_) {}
+    }
+    const persist = (sel, key, reload) => on(sel, 'change').subscribe(e => {
+      try { localStorage.setItem(key, e.ownerTarget.value) } catch (_) {}
+      if (reload) location.reload(); else applyDisplay()
     })
+    applyDisplay()
+    // Keep "auto" reactive to OS light/dark changes.
+    if (window.matchMedia) try { window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyDisplay) } catch (_) {}
+    persist('#set-refccy',  'seqRefCcy',   true)
+    persist('#set-numfmt',  'seqNumFmt',   true)
+    persist('#set-datefmt', 'seqDateUTC',  true)
+    persist('#set-theme',    'seqTheme',    false)
+    persist('#set-font',     'seqFont',     false)
+    persist('#set-textsize', 'seqTextSize', false)
 
     // Switch stylesheet based on current language
     const stylesheet = document.querySelector('link[href="style.css"]')

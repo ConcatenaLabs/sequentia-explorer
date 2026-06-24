@@ -23,6 +23,12 @@ head
   base(href=process.env.BASE_HREF || '/')
 
   meta(name='viewport', content='width=device-width, initial-scale=1')
+  //- SEQUENTIA: apply the per-browser display prefs before the stylesheet paints (no flash)
+  script.
+    try { var d=document.documentElement, ls=localStorage, p=ls.getItem('seqTheme')||'auto';
+      d.setAttribute('data-seq-theme', p==='auto'?((window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark'):p);
+      d.setAttribute('data-seq-font', ls.getItem('seqFont')||'system');
+      d.setAttribute('data-seq-textsize', ls.getItem('seqTextSize')||'normal'); } catch(e){}
   link(rel='shortcut icon', type='image/png', href=staticRoot+'img/favicon.png')
   link(rel='stylesheet', href=staticRoot+cssPath)
 

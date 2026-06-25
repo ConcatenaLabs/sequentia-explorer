@@ -30,7 +30,7 @@ const SettingsPage = ({ t, ...S }) => {
     <div className="container settings-page">
       <h1 className="font-h2">Settings</h1>
       <p className="set-intro text-gray">These preferences are stored only in this browser and change how the explorer
-        <b> displays</b> data — nothing is sent to the server. They apply everywhere in the explorer.</p>
+        <b> displays</b> data; nothing is sent to the server. They apply everywhere in the explorer.</p>
 
       <div className="settings-card">
         { row('Show values in',
@@ -40,9 +40,9 @@ const SettingsPage = ({ t, ...S }) => {
         { row('Number format',
             'How numbers are grouped and punctuated.',
             <select id="set-numfmt">
-              { opt('plain',    '1234.56 — plain', numfmt) }
-              { opt('grouped',  '1,234.56 — grouped (comma)', numfmt) }
-              { opt('european', '1.234,56 — European', numfmt) }
+              { opt('plain',    '1234.56 (plain)', numfmt) }
+              { opt('grouped',  '1,234.56 grouped (comma)', numfmt) }
+              { opt('european', '1.234,56 (European)', numfmt) }
             </select>) }
 
         { row('Times',

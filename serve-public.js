@@ -156,7 +156,7 @@ app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
   // X-Forwarded-For, falling back to the socket address — not user-spoofable.
   const ip = String(req.ip || req.socket.remoteAddress || '').trim()
   if (faucetTooSoon('a:' + unit + ':' + address) || faucetTooSoon('i:' + unit + ':' + ip))
-    return res.status(429).json({ error: 'Already funded recently — please wait before requesting again.' })
+    return res.status(429).json({ error: 'Already funded recently; please wait before requesting again.' })
   const args = ['-datadir=' + FAUCET_DATADIR, '-rpcwallet=' + FAUCET_WALLET, '-named', 'sendtoaddress',
     'address=' + address, 'amount=' + amount, 'fee_rate=2']
   if (asset) args.push('assetlabel=' + asset)
@@ -190,7 +190,7 @@ app.get('/feerates', (req, res) => {
 // Landing / greeting page for the Sequentia demo server: lists what's available.
 const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sequentia — testnet demo server</title>
+<title>Sequentia: testnet demo server</title>
 <link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
 <style>
   :root{color-scheme:dark}
@@ -213,7 +213,7 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
     <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
     <h1>Sequentia <span class="t">testnet</span></h1>
   </div>
-  <p class="sub">A Bitcoin sidechain — real-time anchoring, a BLS proof-of-stake committee, and an open any-asset fee market. This is the public demo server.</p>
+  <p class="sub">A Bitcoin sidechain: Bitcoin anchoring, a BLS proof-of-stake committee, and an open any-asset fee market. This is the public demo server.</p>
   <div class="grid">
     <a class="card" href="/explorer/"><h2>Block Explorer →</h2><p>Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).</p></a>
     <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
@@ -226,7 +226,7 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
       <span>·</span>
       <a href="https://sequentia.io" target="_blank" rel="noopener">sequentia.io</a>
     </div>
-    Testnet only — assets carry no value.
+    Testnet only; assets carry no value.
   </footer>
 </div></body></html>`;
 

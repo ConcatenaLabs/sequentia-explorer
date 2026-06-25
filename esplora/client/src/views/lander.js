@@ -23,7 +23,7 @@ const LandingPage = ({ t, ...S }) => layout(
                     <h1 className="font-h1">Follow Sequentia<br/>down to Bitcoin</h1>
                     <p className="font-p1 text-gray">One explorer for the Sequentia testnet and the Bitcoin testnet4 it
 anchors into.<br/> Blocks, transactions, assets, the proof-of-stake committee, and
-every anchor —<br/> served over an open, fast REST API.</p>
+every anchor,<br/> served over an open, fast REST API.</p>
                     <a href={API_DOCS} target="_blank" rel="noopener" className="g-btn primary-btn">READ THE API DOCS</a>
                 </div>
                 <div className="hero-image">
@@ -96,8 +96,8 @@ every anchor —<br/> served over an open, fast REST API.</p>
                     <div className="cta-left">
                         <img src={`${staticRoot}img/icons/rest-api.svg`} alt="icon" />
                         <h2 className="font-h2">HTTP REST API<br/> for Sequentia and Bitcoin</h2>
-                        <p className="font-p3 text-gray">Read blocks, transactions, UTXOs, mempool, and fees — plus the Bitcoin
-anchor and the proof-of-stake committee certificate —<br/> through low-latency REST endpoints.</p>
+                        <p className="font-p3 text-gray">Read blocks, transactions, UTXOs, mempool, and fees (plus the Bitcoin
+anchor and the proof-of-stake committee certificate)<br/> through low-latency REST endpoints.</p>
                         <a href={API_DOCS} target="_blank" rel="noopener" className="g-btn primary-btn">EXPLORE DOCUMENTATION</a>
                     </div>
                     <div className="cta-right">

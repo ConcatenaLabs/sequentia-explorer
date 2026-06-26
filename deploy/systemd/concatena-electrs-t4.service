@@ -4,7 +4,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/home/aejkohl/SequentiaByClaude/explorer/run-electrs-testnet4.sh
+ExecStart=/home/aejkohl/sequentia-electrs/run-electrs-testnet4.sh
 Restart=always
 RestartSec=5
 

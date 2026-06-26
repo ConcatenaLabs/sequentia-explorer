@@ -5,12 +5,12 @@ Wants=concatena-electrs-seq.service concatena-electrs-t4.service
 
 [Service]
 Type=simple
-WorkingDirectory=/home/aejkohl/SequentiaByClaude/explorer
+WorkingDirectory=/home/aejkohl/sequentia-explorer
 Environment=PORT=8080
-Environment=NODE_PATH=/home/aejkohl/SequentiaByClaude/explorer/esplora/node_modules
+Environment=NODE_PATH=/home/aejkohl/sequentia-explorer/esplora/node_modules
 Environment=SEQ_ELECTRS=127.0.0.1:3003
 Environment=T4_ELECTRS=127.0.0.1:3004
-ExecStart=/home/aejkohl/.local/bin/node /home/aejkohl/SequentiaByClaude/explorer/serve-public.js
+ExecStart=/home/aejkohl/.local/bin/node /home/aejkohl/sequentia-explorer/serve-public.js
 Restart=always
 RestartSec=3
 

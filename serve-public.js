@@ -17,6 +17,8 @@ const SEQ_ELECTRS = process.env.SEQ_ELECTRS || '127.0.0.1:3003'
 const T4_ELECTRS = process.env.T4_ELECTRS || '127.0.0.1:3004'
 const SEQ_REGISTRY = process.env.SEQ_REGISTRY || '127.0.0.1:3005' // Sequentia Asset Registry
 const SEQ_PRICES = process.env.SEQ_PRICES || '127.0.0.1:8088'      // market-data feed (per-asset base prices)
+const SEQ_DEX = process.env.SEQ_DEX || '127.0.0.1:9945'           // SeqDEX daemon (Trade + cross-chain Xchain /v1/*)
+const SEQ_SEQOB = process.env.SEQ_SEQOB || '127.0.0.1:9955'       // SeqOB order-book relay (/v1/offers, orderbook, /v1/lift) + WS /v1/ws
 const PORT = process.env.PORT || 8080
 // Optional release-artifact downloads served at /download (Linux tarball,
 // Windows installer, landing page). Defaults to ./downloads next to this file.
@@ -131,6 +133,15 @@ app.use('/registry', proxyTo(SEQ_REGISTRY))
 // user-chosen reference-currency valuation. A direct route (not a mount) so the
 // path is NOT stripped: GET /prices -> upstream /prices. Public, read-only.
 app.get('/prices', proxyTo(SEQ_PRICES))
+
+// SeqDEX daemon: same-origin /dex -> :9945. Mount strips /dex, so the upstream
+// sees /v1/markets, /v1/trade/*, /v1/xchain/* (and the reverse /v1/xchain/reverse/*).
+app.use('/dex', proxyTo(SEQ_DEX))
+
+// SeqOB order-book relay: same-origin /seqob -> :9955. Mount strips /seqob, so the
+// upstream sees /v1/offers, /v1/market/{base}/{quote}/orderbook, /v1/lift. The WS
+// courier /v1/ws is proxied via the server 'upgrade' handler below (proxyTo is HTTP-only).
+app.use('/seqob', proxyTo(SEQ_SEQOB))
 
 // Release-artifact downloads + landing page (before the SPA fallback so
 // /download/* is served from DOWNLOAD_DIR, not the esplora index.html).
@@ -273,5 +284,32 @@ setInterval(() => {
   })
 }, 20000)
 
-app.listen(PORT, () =>
-  console.log(`explorer (static+proxy) on :${PORT}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${FAUCET_AMOUNT} tSEQ from ${FAUCET_WALLET}`))
+const server = http.createServer(app)
+
+// Proxy WebSocket upgrades for the SeqOB lift courier: /seqob/v1/ws -> :9955/v1/ws.
+// proxyTo() above is HTTP-only; the order-book lift is an interactive WS exchange,
+// so we hand the raw upgraded socket through to seqobd and pipe both directions.
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url || !req.url.startsWith('/seqob/')) { socket.destroy(); return }
+  const upstreamPath = req.url.slice('/seqob'.length) || '/'   // strip the /seqob mount, mirroring app.use
+  const [host, port] = SEQ_SEQOB.split(':')
+  const up = http.request({
+    host, port: port || 80, method: req.method, path: upstreamPath,
+    headers: { ...req.headers, host: SEQ_SEQOB },
+  })
+  up.on('upgrade', (upRes, upSocket, upHead) => {
+    let resp = `HTTP/1.1 ${upRes.statusCode} ${upRes.statusMessage}\r\n`
+    for (let i = 0; i < upRes.rawHeaders.length; i += 2) resp += `${upRes.rawHeaders[i]}: ${upRes.rawHeaders[i + 1]}\r\n`
+    socket.write(resp + '\r\n')
+    if (upHead && upHead.length) socket.write(upHead)
+    upSocket.pipe(socket); socket.pipe(upSocket)
+    upSocket.on('error', () => socket.destroy())
+    socket.on('error', () => upSocket.destroy())
+  })
+  up.on('error', () => socket.destroy())
+  if (head && head.length) up.write(head)
+  up.end()
+})
+
+server.listen(PORT, () =>
+  console.log(`explorer (static+proxy) on :${PORT}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /dex->${SEQ_DEX}  /seqob->${SEQ_SEQOB} (+ws)  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${FAUCET_AMOUNT} tSEQ from ${FAUCET_WALLET}`))

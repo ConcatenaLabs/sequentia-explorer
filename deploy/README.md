@@ -14,7 +14,7 @@ run as `systemctl --user` services so they survive logout.
    Requires **Express 4** (see `explorer/package.json`): run `npm install` in
    `explorer/` — Express 5 changed the `*` route syntax the SPA fallback uses.
 3. **Backends**: the two electrs indexers live in the separate
-   [`sequentia-electrs`](https://github.com/aejkcs50/sequentia-electrs) repo
+   [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs) repo
    (cloned at `~/sequentia-electrs`): `run-electrs-supervised.sh` (Sequentia,
    :3003) and `run-electrs-testnet4.sh` (Bitcoin testnet4, :3004). The testnet4
    binary + 16 GB index live under `~/.local/share/concatena-explorer/`

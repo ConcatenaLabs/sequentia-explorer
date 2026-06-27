@@ -7,7 +7,7 @@ parent chain, plus the public-deploy tooling that serves both under one origin.
 ## Indexer lives in a separate repo
 
 The Rust indexer (electrs) + the vendored `rust-elements` Sequentia decoder were
-split into [`sequentia-electrs`](https://github.com/aejkcs50/sequentia-electrs).
+split into [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs).
 This repo is frontend-only; it talks to the indexer over the Esplora REST API
 (`/api` → electrs `:3003`, `/testnet4/api` → electrs `:3004`), so there is no
 build-time coupling. When the indexer's REST surface changes, update the frontend

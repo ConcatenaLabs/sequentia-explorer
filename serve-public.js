@@ -143,6 +143,16 @@ app.use('/dex', proxyTo(SEQ_DEX))
 // courier /v1/ws is proxied via the server 'upgrade' handler below (proxyTo is HTTP-only).
 app.use('/seqob', proxyTo(SEQ_SEQOB))
 
+// Compages bridge (Ethereum <-> Sequentia): same-origin /bridge -> :9950.
+// The compages daemon serves both its web UI (at /) and its API (at /api/*);
+// the mount strips /bridge, so the daemon sees / and /api/*. The bare /bridge
+// is redirected to /bridge/ so the UI's relative asset/API URLs resolve under
+// the prefix. The web app resolves its API from its own module URL, so it works
+// behind this prefix unchanged.
+const SEQ_BRIDGE = process.env.SEQ_BRIDGE || '127.0.0.1:9950'
+app.get('/bridge', (req, res) => res.redirect(301, '/bridge/'))
+app.use('/bridge', proxyTo(SEQ_BRIDGE))
+
 // Release-artifact downloads + landing page (before the SPA fallback so
 // /download/* is served from DOWNLOAD_DIR, not the esplora index.html).
 app.use('/download', express.static(DOWNLOAD_DIR))

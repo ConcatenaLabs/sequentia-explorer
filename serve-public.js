@@ -212,7 +212,8 @@ app.get('/anchor/:hash', (req, res) => {
     if (err) return res.status(502).json({ error: 'anchor unavailable' })
     try {
       const hdr = JSON.parse(stdout)
-      res.json({ anchorheight: hdr.anchorheight, anchorhash: hdr.anchorhash, height: hdr.height, confirmations: hdr.confirmations })
+      res.json({ anchorheight: hdr.anchorheight, anchorhash: hdr.anchorhash, height: hdr.height, confirmations: hdr.confirmations,
+                 poscertified: hdr.poscertified, poscountersigs: hdr.poscountersigs, posquorum: hdr.posquorum })
     } catch { res.status(502).json({ error: 'anchor parse' }) }
   })
 })

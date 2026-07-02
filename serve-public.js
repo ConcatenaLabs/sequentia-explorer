@@ -198,6 +198,34 @@ app.get('/feerates', (req, res) => {
     })
 })
 
+// Anchor read (Sequentia's Bitcoin-anchor view) for the wallet's cross-chain
+// MAKER anchor gate: a secret-holding reverse maker must SELF-DERIVE a Sequentia
+// block's anchor height before revealing its secret (the esplora REST API does
+// not surface the custom anchor_height header field). Read-only node RPC. The
+// block hash is strictly validated so it can only ever be one argv element.
+const ANCHOR_CLI = process.env.ANCHOR_CLI || FAUCET_CLI
+const ANCHOR_DATADIR = process.env.ANCHOR_DATADIR || BROADCAST_DATADIR
+app.get('/anchor/:hash', (req, res) => {
+  const h = String(req.params.hash || '')
+  if (!/^[0-9a-f]{64}$/.test(h)) return res.status(400).json({ error: 'bad block hash' })
+  execFile(ANCHOR_CLI, ['-datadir=' + ANCHOR_DATADIR, 'getblockheader', h, 'true'], { timeout: 10000 }, (err, stdout) => {
+    if (err) return res.status(502).json({ error: 'anchor unavailable' })
+    try {
+      const hdr = JSON.parse(stdout)
+      res.json({ anchorheight: hdr.anchorheight, anchorhash: hdr.anchorhash, height: hdr.height, confirmations: hdr.confirmations })
+    } catch { res.status(502).json({ error: 'anchor parse' }) }
+  })
+})
+let anchorStatusCache = { at: 0, body: null }
+app.get('/anchorstatus', (req, res) => {
+  if (anchorStatusCache.body && Date.now() - anchorStatusCache.at < 5000) return res.type('json').send(anchorStatusCache.body)
+  execFile(ANCHOR_CLI, ['-datadir=' + ANCHOR_DATADIR, 'getanchorstatus'], { timeout: 10000 }, (err, stdout) => {
+    if (err) return res.status(502).json({ error: 'anchorstatus unavailable' })
+    anchorStatusCache = { at: Date.now(), body: stdout }
+    res.type('json').send(stdout)
+  })
+})
+
 // Landing / greeting page for the Sequentia demo server: lists what's available.
 const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

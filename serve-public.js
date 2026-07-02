@@ -150,7 +150,12 @@ app.use('/seqob', proxyTo(SEQ_SEQOB))
 // the prefix. The web app resolves its API from its own module URL, so it works
 // behind this prefix unchanged.
 const SEQ_BRIDGE = process.env.SEQ_BRIDGE || '127.0.0.1:9950'
-app.get('/bridge', (req, res) => res.redirect(301, '/bridge/'))
+// Express routing is non-strict, so '/bridge' also matches '/bridge/'; only the
+// slash-less form needs the redirect (redirecting '/bridge/' would loop).
+app.get('/bridge', (req, res, next) => {
+  if (req.path === '/bridge') return res.redirect(301, '/bridge/')
+  next()
+})
 app.use('/bridge', proxyTo(SEQ_BRIDGE))
 
 // Release-artifact downloads + landing page (before the SPA fallback so

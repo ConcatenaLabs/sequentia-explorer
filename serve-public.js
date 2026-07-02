@@ -272,6 +272,7 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
   <div class="grid">
     <a class="card" href="/explorer/"><h2>Block Explorer →</h2><p>Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).</p></a>
     <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
+    <a class="card" href="/bridge/"><h2>Ethereum Bridge →</h2><p>Compages: bridge ether or any ERC-20 between Ethereum (Sepolia) and the Sequentia network; a deposit mints a Sequentia asset, a burn redeems the original.</p></a>
     <a class="card" href="/download/"><h2>Downloads →</h2><p>Full node + desktop GUI for Linux and Windows.</p></a>
   </div>
   <footer>

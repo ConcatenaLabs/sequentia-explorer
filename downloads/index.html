@@ -61,15 +61,15 @@
       </div>
       <div class="card">
         <div class="os">Linux · x86-64</div>
-        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.1.0 · testnet preview</span></h2>
-        <div class="file">Fulmen-0.1.0-linux-x86_64.AppImage</div>
-        <a class="dl" href="Fulmen-0.1.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
+        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
+        <div class="file">Fulmen-0.2.0-linux-x86_64.AppImage</div>
+        <a class="dl" href="Fulmen-0.2.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
       </div>
       <div class="card">
         <div class="os">Windows · 64-bit</div>
-        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.1.0 · testnet preview</span></h2>
-        <div class="file">Fulmen-0.1.0-win64.zip</div>
-        <a class="dl" href="Fulmen-0.1.0-win64.zip" download>↓ Download for Windows</a>
+        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
+        <div class="file">Fulmen-0.2.0-win64.zip</div>
+        <a class="dl" href="Fulmen-0.2.0-win64.zip" download>↓ Download for Windows</a>
       </div>
       <div class="card">
         <div class="os">Android · arm64 + x86-64</div>
@@ -93,10 +93,13 @@
       The wallet connects to the Sequentia testnet automatically.
     </p>
     <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Fulmen ⚡</b> (v0.1.0, testnet preview) is a desktop wallet for <b>SeqLN</b>, the Sequentia Lightning Network.
-      It talks to your local SeqLN node and surfaces what makes Sequentia Lightning different: asset channels (each
-      channel carries an issued asset), any-asset payments (<code>pay asset=</code>), per-asset balances, and — on the
-      roadmap — instant pure-LN asset↔BTC swaps.
+      <b>Fulmen ⚡</b> (v0.2.0, testnet preview) is a desktop wallet for <b>SeqLN</b>, the Sequentia Lightning Network,
+      with a full SeqLN node bundled inside: no separate install or setup. On first run it asks for the RPC of a
+      Sequentia node (yours, local or remote) and starts its own Lightning node against it; optionally it also runs
+      Lightning on Bitcoin testnet4 if you point it at a Bitcoin node. It surfaces what makes Sequentia Lightning
+      different: asset channels (each channel carries an issued asset), any-asset payments (<code>pay asset=</code>)
+      and per-asset balances. On Windows the node runs inside WSL2 (installed on demand); the Windows build is an
+      untested preview, and you can always connect Fulmen to a remote SeqLN node instead.
     </p>
     <p style="color:var(--dim);font-size:13px;margin-top:10px">
       <b>Ambra</b> (v0.10.2) is a non-custodial Sequentia mobile wallet, testnet preview.

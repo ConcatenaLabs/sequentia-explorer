@@ -129,32 +129,51 @@ export const REF = (typeof localStorage !== 'undefined' && localStorage.getItem(
 const priceTickerFor = (asset, assetMap) =>
   (!asset || asset === nativeAssetId) ? 'SEQ'                                   // native tSEQ is priced as SEQ
   : ((assetMap && assetMap[asset] && assetMap[asset][1]) || '').toUpperCase()   // registry ticker
-const refUnitPrice = (prices, ref) => ref === 'USD' ? 1 : (prices && prices[ref === 'BTC' ? 'WBTC' : ref]) || null
+// SEQUENTIA: the USD price of one unit of a reference denomination. Bitcoin is keyed
+// 'BTC' by the live /prices feed; older feeds keyed it 'WBTC'. Accept EITHER, so
+// choosing "BTC" as the reference no longer silently blanks every value (T2). Returns
+// null when the ref genuinely has no price this refresh.
+const refUnitPrice = (prices, ref) =>
+    ref === 'USD' ? 1
+  : ref === 'BTC' ? ((prices && (prices.BTC || prices.WBTC)) || null)
+  : (prices && prices[ref]) || null
+// The denomination we can actually value in: the user's chosen REF when it is priced,
+// otherwise USD. Falling back to USD (instead of blanking every "≈" value) keeps the
+// explorer useful when the picked currency has no price; the suffix flags the fallback
+// so the substituted unit reads as deliberate, not a wrong number (T2).
+const effectiveRef = prices => (refUnitPrice(prices, REF) != null ? REF : 'USD')
 const refPrecisionOf = (asset, assetMap) =>
   (!asset || asset === nativeAssetId) ? NATIVE_PRECISION
   : ((assetMap && assetMap[asset] && assetMap[asset][3] != null) ? assetMap[asset][3] : DEFAULT_ISSUED_PRECISION)
-const refValueNum = (asset, value, assetMap, prices) => {
+const refValueNum = (asset, value, assetMap, prices, eref = effectiveRef(prices)) => {
   if (value == null || !prices) return null
-  const pu = prices[priceTickerFor(asset, assetMap)], pr = refUnitPrice(prices, REF)
+  const pu = prices[priceTickerFor(asset, assetMap)], pr = refUnitPrice(prices, eref)
   if (!(pu > 0) || !(pr > 0)) return null
   return (Number(value) / Math.pow(10, refPrecisionOf(asset, assetMap))) * pu / pr
 }
-const fmtRef = v => {
+const fmtRef = (v, eref = REF) => {
   if (v == null) return ''
-  const dp = REF === 'BTC' ? 8 : (Math.abs(v) >= 1 ? 2 : 6)
-  return '≈ ' + fmtDec(v, dp) + ' ' + REF
+  const dp = eref === 'BTC' ? 8 : (Math.abs(v) >= 1 ? 2 : 6)
+  // When the chosen reference is unpriced we value in USD rather than blank; mark it so
+  // the different unit is visibly a fallback (T2).
+  const note = eref !== REF ? ` (${REF} unpriced)` : ''
+  return '≈ ' + fmtDec(v, dp) + ' ' + eref + note
 }
 // a muted "≈ X REF" span (inline-styled so it needs no stylesheet), or '' if unpriced.
 const refSpan = str => str ? <span className="ref-value" style={{ opacity: '0.7', fontSize: '0.85em', whiteSpace: 'nowrap' }}>{str}</span> : ''
 // "≈ X REF" for a single (asset, sats) pair.
-export const refValueStr = (asset, value, assetMap, prices) => fmtRef(refValueNum(asset, value, assetMap, prices))
+export const refValueStr = (asset, value, assetMap, prices) => {
+  const eref = effectiveRef(prices)
+  return fmtRef(refValueNum(asset, value, assetMap, prices, eref), eref)
+}
 export const refValueEl  = (asset, value, assetMap, prices) => refSpan(refValueStr(asset, value, assetMap, prices))
 // "≈ X REF" for the SUM of a list of {asset,value} (mixed assets), or '' if none priced.
 export const refValueOfListStr = (outValues, assetMap, prices) => {
   if (!outValues || !prices) return ''
+  const eref = effectiveRef(prices)
   let sum = 0, any = false
-  for (const o of outValues) { const v = refValueNum(o.asset, o.value, assetMap, prices); if (v != null) { sum += v; any = true } }
-  return any ? fmtRef(sum) : ''
+  for (const o of outValues) { const v = refValueNum(o.asset, o.value, assetMap, prices, eref); if (v != null) { sum += v; any = true } }
+  return any ? fmtRef(sum, eref) : ''
 }
 export const refValueOfListEl = (outValues, assetMap, prices) => refSpan(refValueOfListStr(outValues, assetMap, prices))
 // reference options for the Settings picker. Canonical order: BTC, USD, SEQ first

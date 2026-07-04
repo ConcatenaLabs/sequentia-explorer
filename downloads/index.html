@@ -43,7 +43,7 @@
   <div class="wrap">
     <img class="brand" src="sequentia-logo.svg" alt="Sequentia" height="52">
     <h1>Downloads</h1>
-    <p class="sub">Full node, desktop wallet &amp; the Ambra mobile wallet for Sequentia testnet: Proof-of-Stake, Bitcoin-anchored.</p>
+    <p class="sub">Full node, desktop wallet, the Fulmen Lightning wallet &amp; the Ambra mobile wallet for Sequentia testnet: Proof-of-Stake, Bitcoin-anchored.</p>
     <span class="ver">version 23.3.3 · testnet</span>
 
     <div class="grid">
@@ -60,10 +60,22 @@
         <a class="dl" href="sequentia-core-23.3.3-win64-setup.exe" download>↓ Download for Windows</a>
       </div>
       <div class="card">
+        <div class="os">Linux · x86-64</div>
+        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.1.0 · testnet preview</span></h2>
+        <div class="file">Fulmen-0.1.0-linux-x86_64.AppImage</div>
+        <a class="dl" href="Fulmen-0.1.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
+      </div>
+      <div class="card">
+        <div class="os">Windows · 64-bit</div>
+        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.1.0 · testnet preview</span></h2>
+        <div class="file">Fulmen-0.1.0-win64.zip</div>
+        <a class="dl" href="Fulmen-0.1.0-win64.zip" download>↓ Download for Windows</a>
+      </div>
+      <div class="card">
         <div class="os">Android · arm64 + x86-64</div>
-        <h2>Ambra wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.7.5 · testnet preview</span></h2>
-        <div class="file">ambra-0.7.5-android-testnet.apk</div>
-        <a class="dl" href="ambra-0.7.5-android-testnet.apk" download>↓ Download for Android</a>
+        <h2>Ambra wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.7.19 · testnet preview</span></h2>
+        <div class="file">ambra-0.7.19-android-testnet.apk</div>
+        <a class="dl" href="ambra-0.7.19-android-testnet.apk" download>↓ Download for Android</a>
       </div>
     </div>
 
@@ -75,12 +87,19 @@
     </div>
 
     <p style="color:var(--dim);font-size:14px;margin-top:30px">
-      Linux: extract and run <code>./elements-qt</code>. Windows: run the installer, then launch <b>Sequentia Core</b>.
-      Android: allow “install unknown apps”, then open the <code>.apk</code>.
+      <b>Sequentia Core</b> — Linux: extract and run <code>./elements-qt</code>; Windows: run the installer, then launch <b>Sequentia Core</b>.
+      <b>Fulmen</b> — Linux: make the <code>.AppImage</code> executable and run it; Windows: unzip and run <code>Fulmen.exe</code>.
+      <b>Ambra</b> — Android: allow “install unknown apps”, then open the <code>.apk</code>.
       The wallet connects to the Sequentia testnet automatically.
     </p>
     <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Ambra</b> (v0.7.5) is a non-custodial Sequentia mobile wallet, testnet preview.
+      <b>Fulmen ⚡</b> (v0.1.0, testnet preview) is a desktop wallet for <b>SeqLN</b>, the Sequentia Lightning Network.
+      It talks to your local SeqLN node and surfaces what makes Sequentia Lightning different: asset channels (each
+      channel carries an issued asset), any-asset payments (<code>pay asset=</code>), per-asset balances, and — on the
+      roadmap — instant pure-LN asset↔BTC swaps.
+    </p>
+    <p style="color:var(--dim);font-size:13px;margin-top:10px">
+      <b>Ambra</b> (v0.7.19) is a non-custodial Sequentia mobile wallet, testnet preview.
       Create/import with a biometric lock, multi-asset balances, receive (QR + confidential),
       send with any-asset fees, history, RBF/CPFP rescue, asset issuance, and staking. Built on SWK.
     </p>

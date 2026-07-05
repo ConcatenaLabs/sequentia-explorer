@@ -1,5 +1,5 @@
 import { last } from '../util'
-import { formatNumber, formatJson, formatAssetAmount, formatSat } from './util'
+import { formatNumber, formatJson, formatAssetAmount, formatSat, strTruncate } from './util'
 import layout from './layout'
 import search from './search'
 import { txBox } from './tx'
@@ -157,7 +157,9 @@ export default ({ t, asset, assetTxs, goAsset, openTx, spends, tipHeight, loadin
 
               , <div>
                   <div>{t`Issuance transaction`}</div>
-                  <div><a href={`tx/${asset.issuance_txin.txid}?input:${asset.issuance_txin.vin}&expand`}>{`${asset.issuance_txin.txid}:${asset.issuance_txin.vin}`}</a></div>
+                  {/* SEQUENTIA (T9): elide the 64-char txid in the visible label; the full
+                      id stays in the link target and the hover title. */}
+                  <div><a className="mono" title={`${asset.issuance_txin.txid}:${asset.issuance_txin.vin}`} href={`tx/${asset.issuance_txin.txid}?input:${asset.issuance_txin.vin}&expand`}>{`${strTruncate(asset.issuance_txin.txid)}:${asset.issuance_txin.vin}`}</a></div>
                 </div>
 
               , <div>
@@ -181,22 +183,22 @@ export default ({ t, asset, assetTxs, goAsset, openTx, spends, tipHeight, loadin
               , <div>
                   <div>{t`Issued amount`}</div>
                   <div>{chain_stats.has_blinded_issuances ? t`Confidential`
-                       : formatAssetAmount(chain_stats.issued_amount, asset.precision, t) }</div>
+                       : formatAssetAmount(chain_stats.issued_amount, disp_precision, t) }</div>
                 </div>
 
               , mempool_stats.issued_amount > 0 && <div>
                   <div>{t`Issued amount (unconfirmed)`}</div>
-                  <div>{formatAssetAmount(mempool_stats.issued_amount, asset.precision, t)}</div>
+                  <div>{formatAssetAmount(mempool_stats.issued_amount, disp_precision, t)}</div>
                 </div>
 
               , chain_stats.burned_amount > 0 && <div>
                   <div>{t`Burned amount`}</div>
-                  <div>{formatAssetAmount(chain_stats.burned_amount, asset.precision, t)}</div>
+                  <div>{formatAssetAmount(chain_stats.burned_amount, disp_precision, t)}</div>
                 </div>
 
               , mempool_stats.burned_amount > 0 && <div>
                   <div>{t`Burned amount (unconfirmed)`}</div>
-                  <div>{formatAssetAmount(mempool_stats.burned_amount, asset.precision, t)}</div>
+                  <div>{formatAssetAmount(mempool_stats.burned_amount, disp_precision, t)}</div>
                 </div>
 
               , <div>
@@ -219,7 +221,7 @@ export default ({ t, asset, assetTxs, goAsset, openTx, spends, tipHeight, loadin
               , <div>
                   <div>{t`Circulating amount`}</div>
                   <div className="mono">{ circulating == null ? t`Confidential`
-                      : formatAssetAmount(circulating, asset.precision, t) }</div>
+                      : formatAssetAmount(circulating, disp_precision, t) }</div>
                 </div>
 
               , <div>

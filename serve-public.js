@@ -169,7 +169,7 @@ app.use('/wallet', express.static(WALLET_DIR))
 // Testnet faucet. execFile (no shell) + a strict address regex means the user-supplied
 // address can't inject anything; it's only ever an argv element. The optional `asset` is
 // validated against a fixed allowlist (label -> amount), so it's injection-safe too.
-const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', WBTC: '10', SILVR: '10', OILX: '10' }
+const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', SILVR: '10', OILX: '10' }
 app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
   const address = String((req.body && req.body.address) || '').trim()
   if (!FAUCET_ADDR_RE.test(address)) return res.status(400).json({ error: 'Enter a valid Sequentia address.' })

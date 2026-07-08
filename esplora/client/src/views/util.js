@@ -130,12 +130,10 @@ const priceTickerFor = (asset, assetMap) =>
   (!asset || asset === nativeAssetId) ? 'SEQ'                                   // native tSEQ is priced as SEQ
   : ((assetMap && assetMap[asset] && assetMap[asset][1]) || '').toUpperCase()   // registry ticker
 // SEQUENTIA: the USD price of one unit of a reference denomination. Bitcoin is keyed
-// 'BTC' by the live /prices feed; older feeds keyed it 'WBTC'. Accept EITHER, so
-// choosing "BTC" as the reference no longer silently blanks every value (T2). Returns
-// null when the ref genuinely has no price this refresh.
+// 'BTC' by the live /prices feed. Returns null when the ref genuinely has no price
+// this refresh.
 const refUnitPrice = (prices, ref) =>
     ref === 'USD' ? 1
-  : ref === 'BTC' ? ((prices && (prices.BTC || prices.WBTC)) || null)
   : (prices && prices[ref]) || null
 // The denomination we can actually value in: the user's chosen REF when it is priced,
 // otherwise USD. Falling back to USD (instead of blanking every "≈" value) keeps the
@@ -178,12 +176,12 @@ export const refValueOfListStr = (outValues, assetMap, prices) => {
 export const refValueOfListEl = (outValues, assetMap, prices) => refSpan(refValueOfListStr(outValues, assetMap, prices))
 // reference options for the Settings picker. Canonical order: BTC, USD, SEQ first
 // (always shown), then every other priced asset from the registry, alphabetically.
-// WBTC is shown as BTC; the current selection is kept present even if unpriced.
+// The current selection is kept present even if unpriced.
 export const refOptions = prices => {
   const head = ['BTC', 'USD', 'SEQ']
   const rest = new Set()
   if (prices) for (const k of Object.keys(prices)) {
-    const t = (k === 'WBTC' ? 'BTC' : k).toUpperCase()
+    const t = k.toUpperCase()
     if (!head.includes(t)) rest.add(t)
   }
   if (REF && !head.includes(REF)) rest.add(REF)

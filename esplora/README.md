@@ -1,5 +1,20 @@
 # Esplora Block Explorer
 
+> **Sequentia fork note.** This directory is the vendored
+> [Blockstream Esplora](https://github.com/Blockstream/esplora) frontend,
+> adapted for the Sequentia testnet. The Sequentia flavors are
+> `flavors/sequentia-testnet/` (the Sequentia explorer) and
+> `flavors/bitcoin-testnet4/` (the Bitcoin testnet4 parent-chain explorer);
+> build both with the repo root's `build-public.sh`, or run one directly with
+> the repo root's `run-sequentia-explorer.sh` / `run-testnet4-explorer.sh`.
+> The list of Sequentia-specific frontend changes, the local quickstart, and
+> the production setup are in the
+> [repository README](../README.md). Sequentia additions to the REST API are
+> documented in [API.md](API.md#sequentia). The rest of this file is upstream
+> documentation, kept as a build-system and configuration reference; the
+> Blockstream-hosted instances, Docker images, and Liquid/Bitcoin flavors it
+> describes are upstream's, not Sequentia's.
+
 [![build status](https://api.travis-ci.org/Blockstream/esplora.svg)](https://travis-ci.org/Blockstream/esplora)
 [![docker release](https://img.shields.io/docker/pulls/blockstream/esplora.svg)](https://hub.docker.com/r/blockstream/esplora)
 [![MIT license](https://img.shields.io/github/license/blockstream/esplora.svg)](https://github.com/blockstream/esplora/blob/master/LICENSE)

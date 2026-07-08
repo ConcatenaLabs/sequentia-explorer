@@ -16,6 +16,100 @@ $ curl https://blockstream.info/api/blocks/tip/hash
 
 You can also [self-host the Esplora API server](https://github.com/Blockstream/esplora#how-to-run-the-explorer-for-bitcoin-mainnet), which provides better privacy and security.
 
+## Sequentia
+
+The Sequentia testnet API is this same Esplora HTTP API, served by the
+[`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs)
+indexer. Public base URLs:
+
+- Sequentia testnet: `https://sequentiatestnet.com/api`
+- Bitcoin testnet4 (the parent chain): `https://sequentiatestnet.com/testnet4/api`
+
+```bash
+$ curl -s https://sequentiatestnet.com/api/blocks/tip/height
+```
+
+The Bitcoin testnet4 API behaves exactly as documented below. On the Sequentia
+chain there are these differences and additions:
+
+### Assets and amounts
+
+Sequentia is an Elements-based multi-asset chain, so the
+[Assets endpoints](#assets-elementsliquid-only) below are active. Where the
+upstream documentation says "satoshis", read "base units of the asset in
+question"; an asset's display precision is metadata from the
+[Sequentia Asset Registry](https://github.com/GracedEternalKingCabbageMan/sequentia-registry)
+and does not change the API's units. Sequentia has an open fee market: a
+transaction fee can be paid in any asset the block producers accept, so a fee
+value is denominated in the paying asset's base units, not necessarily tSEQ.
+
+### Sequentia block fields
+
+Block objects (`GET /block/:hash`, `GET /blocks`) carry additional fields:
+
+- `bitcoin_anchor`: the Bitcoin testnet4 block this Sequentia block is
+  anchored to, as `{ "height": .., "hash": ".." }`. Example from a live block:
+
+  ```json
+  "bitcoin_anchor": {
+    "height": 143437,
+    "hash": "0000000000332055be8f1dabdf957cdb4b02afe60097f9535b6facc75b9c6c6c"
+  }
+  ```
+
+- `pos_certificate` *(optional)*: the decoded proof-of-stake BLS committee
+  certificate, with `leader_sig`, `agg_sig` (the BLS aggregate signature) and
+  `members`, an array of signing committee members
+  (`secp_pubkey`, `vrf_proof`, `bls_pubkey`, `bls_pop`). Only present when the
+  block's proof solution decodes as a BLS committee certificate; omitted
+  otherwise.
+- `finalized` *(optional, `GET /block/:hash` only)*: whether the block is
+  checkpoint-finalized. Omitted when finality information is unavailable.
+
+Sequentia blocks are certified by a proof-of-stake committee, so the PoW
+fields (`bits`, `nonce`, `difficulty`) are absent; the raw block proof is
+exposed as `ext.challenge` / `ext.solution` (the [Block format](#block-format)
+section below calls this object `proof`).
+
+### `GET /sequentia/anchorstatus`
+
+Sequentia only. The indexer's node-side anchor status (a `getanchorstatus`
+RPC passthrough): the chain tip, the Bitcoin anchor it points at, and whether
+anchor validation is active. Example:
+
+```json
+{
+  "anchorhash": "0000000000332055be8f1dabdf957cdb4b02afe60097f9535b6facc75b9c6c6c",
+  "anchorheight": 143437,
+  "anchorstatus": "ok",
+  "tipheight": 7311,
+  "validateanchor": true
+}
+```
+
+### Mempool overview fields
+
+On Sequentia, `GET /mempool/recent` entries replace the single `value` field
+with per-asset data: `out_values` (an array of `{ "asset": .., "value": .. }`
+explicit output totals), a `confidential` flag (true when the transaction has
+blinded outputs), and `fee_asset` (the asset the fee is paid in).
+
+### Broadcasting on the public instance
+
+On `https://sequentiatestnet.com/api`, `POST /tx` is handled by the explorer's
+front server rather than electrs: it forwards the raw transaction hex to a
+block producer as well as to the explorer's own node (the testnet's committee
+mesh does not relay externally submitted transactions on its own). The
+interface is unchanged: the body is the transaction hex, the response is the
+txid.
+
+### Same-origin companion endpoints
+
+The public server exposes a few non-Esplora endpoints on the same origin
+(`/registry/*`, `/prices`, `/feerates`, `/anchor/:hash`, `/anchorstatus`,
+`POST /faucet`). They are part of the deployment, not of this API; see the
+[repository README](../README.md).
+
 ## Transactions
 
 ### `GET /tx/:txid`

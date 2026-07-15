@@ -274,6 +274,8 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
     <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
     <a class="card" href="/emissio/"><h2>Emissio Rewards →</h2><p>The community issue register: earn Sequence tokens (SEQ), paid at mainnet launch, for completing testnet tasks, winning competitions and reporting vulnerabilities.</p></a>
     <a class="card" href="/bridge/"><h2>Ethereum Bridge →</h2><p>Compages: bridge ether or any ERC-20 between Ethereum (Sepolia) and the Sequentia network; a deposit mints a Sequentia asset, a burn redeems the original.</p></a>
+    <a class="card" href="/seqpal/"><h2>SeqPal Issuance →</h2><p>Tokenize and service compliant securities on Sequentia: structure an offering, issue a restricted asset whose transfer rules the policy server enforces at co-sign, and run the transfer-agent lifecycle. A proof of concept.</p></a>
+    <a class="card" href="/seqpal/id"><h2>SeqPal ID →</h2><p>One verified identity for issuing and holding SeqPal-managed restricted assets: create a SeqPal ID, carry your eligibility categories, and use them wherever these assets are accepted.</p></a>
     <a class="card" href="/download/"><h2>Downloads →</h2><p>Full node, desktop wallet &amp; the Fulmen Lightning wallet for Linux and Windows, plus the Ambra mobile wallet for Android.</p></a>
   </div>
   <footer>

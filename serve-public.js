@@ -164,7 +164,13 @@ app.use('/download', express.static(DOWNLOAD_DIR))
 
 // SWK browser wallet (static page + WebAssembly pkg/; express serves .wasm with
 // the application/wasm MIME). Before the SPA fallback so /wallet/* is its own.
-app.use('/wallet', express.static(WALLET_DIR))
+// The wallet is a live-deployed app: `no-cache` makes every load REVALIDATE
+// against the box (ETag/304 keeps repeat loads cheap) instead of the browser's
+// heuristic freshness, which kept users on a stale swap.js for hours after a
+// deploy — bugs stayed "fixed on the box, broken in the browser".
+app.use('/wallet', express.static(WALLET_DIR, {
+  setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
+}))
 
 // Testnet faucet. execFile (no shell) + a strict address regex means the user-supplied
 // address can't inject anything; it's only ever an argv element. The optional `asset` is

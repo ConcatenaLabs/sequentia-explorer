@@ -9,6 +9,7 @@
 // NOTE: requires Express 4 (the SPA '*' route below uses the v4 path syntax;
 // Express 5 changed wildcard handling). See explorer/package.json.
 const express = require('express')
+const { intersectAtMinimum } = require('./feerates')
 const http = require('http')
 const path = require('path')
 
@@ -207,16 +208,76 @@ app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
 // pay a Sequentia tx fee in a non-policy asset. No user input → no injection surface;
 // short-cached since rates move ~per block.
 const FEERATES_CLI = process.env.FEERATES_CLI || FAUCET_CLI
-const FEERATES_DATADIR = process.env.FEERATES_DATADIR || '/root/sequentia/explorer-node'
+// THE NODES WE ACTUALLY BROADCAST TO. /feerates used to read ONE node (the
+// explorer's), while POST /api/tx submits to the producer AND the explorer. Two
+// daemons, two independent rate tables, coupled only by the price-server sidecar
+// happening to feed both. Anything the wallet offered on the strength of the
+// explorer's table could be refused by the producer, and the user got a generic
+// "min relay fee not met" with nothing to act on.
+//
+// So this list must stay identical to the broadcast targets above. It is derived
+// from the same constants for exactly that reason.
+const FEERATES_DATADIRS = (process.env.FEERATES_DATADIRS
+  ? process.env.FEERATES_DATADIRS.split(',').map(s => s.trim()).filter(Boolean)
+  : [PRODUCER_DATADIR, BROADCAST_DATADIR])
+
+const cliJson = (datadir, method, cb) =>
+  execFile(FEERATES_CLI, ['-datadir=' + datadir, method], { timeout: 10000 }, (err, stdout) => {
+    if (err) return cb(err)
+    try { cb(null, JSON.parse(stdout)) } catch (e) { cb(e) }
+  })
+
+// Read one node's acceptance set, KEYED BY ASSET HEX.
+//
+// getfeeexchangerates keys by asset LABEL where the node has one and by hex
+// otherwise, and labels are per-node configuration. Intersecting the raw maps
+// would therefore compare a label on one node against a hex on another and
+// silently produce an EMPTY intersection — which, now that an unlisted asset is
+// simply not accepted, would take the whole fee market off the wallet. So every
+// key is normalised through that node's own dumpassetlabels before comparison.
+const nodeRatesByHex = (datadir, cb) => {
+  cliJson(datadir, 'dumpassetlabels', (lerr, labels) => {
+    if (lerr) return cb(lerr)
+    const toHex = new Map(Object.entries(labels || {}))
+    cliJson(datadir, 'getfeeexchangerates', (rerr, rates) => {
+      if (rerr) return cb(rerr)
+      const out = new Map()
+      for (const [key, rate] of Object.entries(rates || {})) {
+        const hex = toHex.get(key) || (/^[0-9a-f]{64}$/i.test(key) ? key.toLowerCase() : null)
+        if (!hex) continue                       // a label this node cannot resolve is not comparable
+        const n = Number(rate)
+        if (Number.isFinite(n) && n > 0) out.set(hex, n)   // a 0 rate is listed but refused: not accepted
+      }
+      // Keep this node's preferred display key so the response shape does not change.
+      const label = new Map()
+      for (const [k, hex] of toHex) label.set(hex, k)
+      cb(null, { rates: out, label })
+    })
+  })
+}
+
 let feeratesCache = { at: 0, body: null }
 app.get('/feerates', (req, res) => {
   if (feeratesCache.body && Date.now() - feeratesCache.at < 15000) return res.type('json').send(feeratesCache.body)
-  execFile(FEERATES_CLI, ['-datadir=' + FEERATES_DATADIR, 'getfeeexchangerates'], { timeout: 10000 },
-    (err, stdout) => {
-      if (err) return res.status(502).json({ error: 'fee rates unavailable' })
-      feeratesCache = { at: Date.now(), body: stdout }
-      res.type('json').send(stdout)
+  let pending = FEERATES_DATADIRS.length
+  const results = []
+  let failed = false
+  FEERATES_DATADIRS.forEach((datadir, i) => {
+    nodeRatesByHex(datadir, (err, r) => {
+      if (!err) results[i] = r
+      else failed = true
+      if (--pending) return
+      // Every node we broadcast to must answer. A node we cannot read is a node
+      // that might refuse the fee, and publishing a set we cannot stand behind is
+      // exactly the failure this endpoint exists to prevent.
+      if (failed || results.filter(Boolean).length !== FEERATES_DATADIRS.length)
+        return res.status(502).json({ error: 'fee rates unavailable' })
+
+      const body = JSON.stringify(intersectAtMinimum(results), null, 2)
+      feeratesCache = { at: Date.now(), body }
+      res.type('json').send(body)
     })
+  })
 })
 
 // Anchor read (Sequentia's Bitcoin-anchor view) for the wallet's cross-chain

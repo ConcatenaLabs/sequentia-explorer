@@ -20,6 +20,15 @@ const SEQ_REGISTRY = process.env.SEQ_REGISTRY || '127.0.0.1:3005' // Sequentia A
 const SEQ_PRICES = process.env.SEQ_PRICES || '127.0.0.1:8088'      // market-data feed (per-asset base prices)
 const SEQ_DEX = process.env.SEQ_DEX || '127.0.0.1:9945'           // SeqDEX daemon (Trade + cross-chain Xchain /v1/*)
 const SEQ_SEQOB = process.env.SEQ_SEQOB || '127.0.0.1:9955'       // SeqOB order-book relay (/v1/offers, orderbook, /v1/lift) + WS /v1/ws
+// THE OTHER RELAYS THE UNIFIED BOOK MERGES. The book shows offers from several
+// relays, but a TAKE is an interactive courier session that must be opened against
+// the relay actually HOLDING the offer — anywhere else answers "offer not found or
+// not open". Proxying only :9955 meant every matched submarine / pure-LN offer was
+// visible and unliftable. Same mount convention, one path per relay, WS included.
+const SEQ_SEQOB_PLN = process.env.SEQ_SEQOB_PLN || '127.0.0.1:9965'     // submarine + pure-LN makers
+const SEQ_SEQOB_SUBAS = process.env.SEQ_SEQOB_SUBAS || '127.0.0.1:9971' // sub-asset makers
+// Mount path -> upstream, for both the HTTP proxy and the WS upgrade handler.
+const SEQOB_RELAYS = { '/seqob': SEQ_SEQOB, '/seqob-pln': SEQ_SEQOB_PLN, '/seqob-subas': SEQ_SEQOB_SUBAS }
 const PORT = process.env.PORT || 8080
 // Optional release-artifact downloads served at /download (Linux tarball,
 // Windows installer, landing page). Defaults to ./downloads next to this file.
@@ -143,6 +152,9 @@ app.use('/dex', proxyTo(SEQ_DEX))
 // upstream sees /v1/offers, /v1/market/{base}/{quote}/orderbook, /v1/lift. The WS
 // courier /v1/ws is proxied via the server 'upgrade' handler below (proxyTo is HTTP-only).
 app.use('/seqob', proxyTo(SEQ_SEQOB))
+// The sibling relays, same convention (see SEQOB_RELAYS).
+app.use('/seqob-pln', proxyTo(SEQ_SEQOB_PLN))
+app.use('/seqob-subas', proxyTo(SEQ_SEQOB_SUBAS))
 
 // Compages bridge (Ethereum <-> Sequentia): same-origin /bridge -> :9950.
 // The compages daemon serves both its web UI (at /) and its API (at /api/*);
@@ -535,12 +547,18 @@ const server = http.createServer(app)
 // proxyTo() above is HTTP-only; the order-book lift is an interactive WS exchange,
 // so we hand the raw upgraded socket through to seqobd and pipe both directions.
 server.on('upgrade', (req, socket, head) => {
-  if (!req.url || !req.url.startsWith('/seqob/')) { socket.destroy(); return }
-  const upstreamPath = req.url.slice('/seqob'.length) || '/'   // strip the /seqob mount, mirroring app.use
-  const [host, port] = SEQ_SEQOB.split(':')
+  // Route to the relay whose mount this is. Longest mount first, so /seqob-pln is
+  // not swallowed by the /seqob prefix.
+  const mount = Object.keys(SEQOB_RELAYS)
+    .sort((a, b) => b.length - a.length)
+    .find((m) => req.url && req.url.startsWith(m + '/'))
+  if (!mount) { socket.destroy(); return }
+  const upstream = SEQOB_RELAYS[mount]
+  const upstreamPath = req.url.slice(mount.length) || '/'   // strip the mount, mirroring app.use
+  const [host, port] = upstream.split(':')
   const up = http.request({
     host, port: port || 80, method: req.method, path: upstreamPath,
-    headers: { ...req.headers, host: SEQ_SEQOB },
+    headers: { ...req.headers, host: upstream },
   })
   up.on('upgrade', (upRes, upSocket, upHead) => {
     let resp = `HTTP/1.1 ${upRes.statusCode} ${upRes.statusMessage}\r\n`

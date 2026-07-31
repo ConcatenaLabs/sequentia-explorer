@@ -26,9 +26,15 @@ const SEQ_SEQOB = process.env.SEQ_SEQOB || '127.0.0.1:9955'       // SeqOB order
 // not open". Proxying only :9955 meant every matched submarine / pure-LN offer was
 // visible and unliftable. Same mount convention, one path per relay, WS included.
 const SEQ_SEQOB_PLN = process.env.SEQ_SEQOB_PLN || '127.0.0.1:9965'     // submarine + pure-LN makers
-const SEQ_SEQOB_SUBAS = process.env.SEQ_SEQOB_SUBAS || '127.0.0.1:9971' // sub-asset makers
+const SEQ_SEQOB_SUBAS = process.env.SEQ_SEQOB_SUBAS || '127.0.0.1:9971' // sub-asset SELL makers
+// The sub-asset BUY relay (:9966) had NO mount at all, so every offer resting on it was
+// visible in the unified book and impossible to lift from a browser: the courier fell
+// through to the default mount and dialled the wrong relay, which answers "offer not
+// found or not open". That is the rail where the taker pays BTC on-chain and receives
+// the asset over Lightning — unreachable from the web wallet for want of one line.
+const SEQ_SEQOB_SUBASBUY = process.env.SEQ_SEQOB_SUBASBUY || '127.0.0.1:9966'
 // Mount path -> upstream, for both the HTTP proxy and the WS upgrade handler.
-const SEQOB_RELAYS = { '/seqob': SEQ_SEQOB, '/seqob-pln': SEQ_SEQOB_PLN, '/seqob-subas': SEQ_SEQOB_SUBAS }
+const SEQOB_RELAYS = { '/seqob': SEQ_SEQOB, '/seqob-pln': SEQ_SEQOB_PLN, '/seqob-subas': SEQ_SEQOB_SUBAS, '/seqob-subasbuy': SEQ_SEQOB_SUBASBUY }
 const PORT = process.env.PORT || 8080
 // Optional release-artifact downloads served at /download (Linux tarball,
 // Windows installer, landing page). Defaults to ./downloads next to this file.
@@ -154,6 +160,7 @@ app.use('/dex', proxyTo(SEQ_DEX))
 app.use('/seqob', proxyTo(SEQ_SEQOB))
 // The sibling relays, same convention (see SEQOB_RELAYS).
 app.use('/seqob-pln', proxyTo(SEQ_SEQOB_PLN))
+app.use('/seqob-subasbuy', proxyTo(SEQ_SEQOB_SUBASBUY))   // registered before the shorter sibling
 app.use('/seqob-subas', proxyTo(SEQ_SEQOB_SUBAS))
 
 // Compages bridge (Ethereum <-> Sequentia): same-origin /bridge -> :9950.

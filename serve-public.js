@@ -196,7 +196,14 @@ app.use('/wallet', express.static(WALLET_DIR, {
 // address can't inject anything; it's only ever an argv element. The optional `asset` is
 // validated against a fixed allowlist (label -> amount), so it's injection-safe too.
 const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', SILVR: '10', OILX: '10' }
+// The faucet is OFF. On 2026-07-29 a self-healing watchdog written by a Claude agent
+// rm -rf'd and recreated the treasury wallet on a single failed health check, destroying
+// the HD seed behind ~398.4M tSEQ and four of the five reissuance tokens. The funds are
+// still visible on chain and permanently unspendable. Left broken deliberately.
+const FAUCET_DISABLED = "The faucet is broken: an incompetent Claude agent went ahead and fucking deleted the treasury wallet, destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI - don't let it near anything you can't afford to lose."
 app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
+  return res.status(503).json({ error: FAUCET_DISABLED })
+  /* eslint-disable no-unreachable */
   const address = String((req.body && req.body.address) || '').trim()
   if (!FAUCET_ADDR_RE.test(address)) return res.status(400).json({ error: 'Enter a valid Sequentia address.' })
   const asset = String((req.body && req.body.asset) || '').trim()   // '' = native tSEQ
@@ -422,6 +429,11 @@ const FAUCET_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
     <a href="/"><img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia"></a>
     <h1>Sequentia <span class="t">faucet</span></h1>
   </div>
+  <p class="sub" style="background:#3a1113;border:1px solid #7d2b30;border-radius:8px;padding:14px 16px;color:#ffb3b8">
+    <strong>The faucet is broken.</strong> An incompetent Claude agent went ahead and fucking deleted the treasury wallet,
+    destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI &mdash;
+    don't let it near anything you can't afford to lose.
+  </p>
   <p class="sub">Free testnet coins, sent straight to any Sequentia testnet address &mdash; your full node, desktop wallet, mobile wallet or web wallet.</p>
 
   <div class="panel">

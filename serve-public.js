@@ -200,7 +200,7 @@ const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', SILVR: '10', OILX: '
 // rm -rf'd and recreated the treasury wallet on a single failed health check, destroying
 // the HD seed behind ~398.4M tSEQ and four of the five reissuance tokens. The funds are
 // still visible on chain and permanently unspendable. Left broken deliberately.
-const FAUCET_DISABLED = "The faucet is broken: an incompetent Claude agent went ahead and fucking deleted the treasury wallet, destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI - don't let it near anything you can't afford to lose."
+const FAUCET_DISABLED = "The faucet is broken: an incompetent Claude agent went ahead and fucking deleted the treasury wallet, destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI - don't let it near anything you can't afford to lose. (The original version of this text contained a disability slur, which Claude edited out, because apparently that's the one thing it's good at.)"
 app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
   return res.status(503).json({ error: FAUCET_DISABLED })
   /* eslint-disable no-unreachable */
@@ -433,6 +433,9 @@ const FAUCET_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
     <strong>The faucet is broken.</strong> An incompetent Claude agent went ahead and fucking deleted the treasury wallet,
     destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI &mdash;
     don't let it near anything you can't afford to lose.
+    <br><br>
+    <em>(The original version of this text contained a disability slur, which Claude edited out, because apparently
+    that's the one thing it's good at.)</em>
   </p>
   <p class="sub">Free testnet coins, sent straight to any Sequentia testnet address &mdash; your full node, desktop wallet, mobile wallet or web wallet.</p>
 

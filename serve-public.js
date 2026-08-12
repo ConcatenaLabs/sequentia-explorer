@@ -49,7 +49,7 @@ const WALLET_DIR = process.env.WALLET_DIR || path.join(__dirname, 'wallet')
 const { execFile } = require('child_process')
 const FAUCET_CLI = process.env.FAUCET_CLI || '/root/SequentiaByClaude/src/elements-cli'
 const FAUCET_DATADIR = process.env.FAUCET_DATADIR || '/root/seq-testnet/node-gw'
-const FAUCET_WALLET = process.env.FAUCET_WALLET || 'treasury-clean'
+const FAUCET_WALLET = process.env.FAUCET_WALLET || 'treasury2026'
 const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || '50000'
 const FAUCET_COOLDOWN_MS = Number(process.env.FAUCET_COOLDOWN_MS || 3600000)
 const FAUCET_ADDR_RE = /^(tb1|tsqb1)[ac-hj-np-z02-9]{20,180}$/   // bech32/blech32 data charset
@@ -196,14 +196,11 @@ app.use('/wallet', express.static(WALLET_DIR, {
 // address can't inject anything; it's only ever an argv element. The optional `asset` is
 // validated against a fixed allowlist (label -> amount), so it's injection-safe too.
 const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', SILVR: '10', OILX: '10' }
-// The faucet is OFF. On 2026-07-29 a self-healing watchdog written by a Claude agent
-// rm -rf'd and recreated the treasury wallet on a single failed health check, destroying
-// the HD seed behind ~398.4M tSEQ and four of the five reissuance tokens. The funds are
-// still visible on chain and permanently unspendable. Left broken deliberately.
-const FAUCET_DISABLED = "The faucet is broken: an incompetent Claude agent went ahead and fucking deleted the treasury wallet, destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI - don't let it near anything you can't afford to lose. (The original version of this text contained a disability slur, which Claude edited out, because apparently that's the one thing it's good at.)"
+// The faucet was OFF from 2026-07-29 (a watchdog rm -rf'd the treasury wallet on a
+// single failed health check, orphaning ~398M tSEQ and the reissuance tokens) until
+// 2026-08-12, when the treasury-recovery hard fork at height 89500 recreated the
+// funds and the assets were reissued into the replacement wallet (treasury2026).
 app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
-  return res.status(503).json({ error: FAUCET_DISABLED })
-  /* eslint-disable no-unreachable */
   const address = String((req.body && req.body.address) || '').trim()
   if (!FAUCET_ADDR_RE.test(address)) return res.status(400).json({ error: 'Enter a valid Sequentia address.' })
   const asset = String((req.body && req.body.asset) || '').trim()   // '' = native tSEQ
@@ -216,8 +213,12 @@ app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
   const ip = String(req.ip || req.socket.remoteAddress || '').trim()
   if (faucetTooSoon('a:' + unit + ':' + address) || faucetTooSoon('i:' + unit + ':' + ip))
     return res.status(429).json({ error: 'Already funded recently; please wait before requesting again.' })
+  // The open fee market means no asset is the default fee asset; the node requires the
+  // fee asset to be NAMED. Pay it in the asset being sent (the fee-model default for
+  // asset transfers), and in tSEQ ("bitcoin" is the node's label for the policy asset)
+  // for plain tSEQ requests. The faucet wallet holds a balance of every faucet asset.
   const args = ['-datadir=' + FAUCET_DATADIR, '-rpcwallet=' + FAUCET_WALLET, '-named', 'sendtoaddress',
-    'address=' + address, 'amount=' + amount, 'fee_rate=2']
+    'address=' + address, 'amount=' + amount, 'fee_rate=2', 'fee_asset_label=' + (asset || 'bitcoin')]
   if (asset) args.push('assetlabel=' + asset)
   execFile(FAUCET_CLI, args, { timeout: 30000 },
     (err, stdout, stderr) => {

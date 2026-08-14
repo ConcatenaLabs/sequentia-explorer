@@ -280,6 +280,16 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
         .map(d => { const m = {}; for (const k in d) { const v = d[k], p = (v && typeof v === 'object') ? v.price : v; if (p > 0) m[k.toUpperCase()] = p } return m })
         .merge(extractErrors(HTTP.select('prices')).mapTo({}))
 
+  // SEQUENTIA: how many stakers are registered in the PoS committee right now, so a
+  // block's signer count can be read against something. It is deliberately not
+  // derived from the signer bitfield: that is byte-padded, so 13 members occupy 16
+  // bits and the width would overstate the committee. null until it answers, and
+  // null again if it cannot, so the view simply omits the comparison.
+  , posCommittee$ = !process.env.IS_ELEMENTS ? O.of(null) :
+      reply('pos-committee').map(d => (d && d.size) || null)
+        .merge(extractErrors(HTTP.select('pos-committee')).mapTo(null))
+        .startWith(null)
+
   // Assets List State
   , assetList$ = !process.env.IS_ELEMENTS ? O.empty() :
       reply('assetlist', true).map(r => ({ assets: r.body, total: r.headers['x-total-results'] || 493 }))
@@ -328,7 +338,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$
                      , goAddr$, addr$, addrTxs$, addrQR$
-                     , assetMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
+                     , assetMap$, prices$, posCommittee$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
                      })
 
@@ -405,9 +415,19 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     // ... and every 5 seconds while it remains open
     , tickWhileViewing(5000, 'recentTxs', view$)
        .mapTo(                 { category: 'recent',     method: 'GET', path: '/mempool/recent', bg: true })
-    // ... and every 5 seconds while dashBoard remains open
+    // ... and every 5 seconds while dashBoard remains open.
+    // Both lists, not just the mempool. Refreshing only /mempool/recent left the
+    // block list frozen at whatever the page loaded with, so a new block never
+    // appeared without a manual reload -- while transactions under it kept moving,
+    // which makes the page look live when it is not. Everything needed for this
+    // already existed: updateBlocks merges by height rather than appending, and
+    // trackNewEntries marks the arrivals. Only the request was missing.
+    // The dashboard has no block pagination, so re-fetching the first page is
+    // always what the viewer wants here -- unlike the recentBlocks page above,
+    // where the same tick would drag a paginated reader back to the tip.
     , tickWhileViewing(5000, 'dashBoard', view$)
-    .mapTo(                 { category: 'recent',     method: 'GET', path: '/mempool/recent', bg: true })
+    .flatMap(_ =>             [{ category: 'recent',     method: 'GET', path: '/mempool/recent', bg: true }
+                              ,{ category: 'blocks',     method: 'GET', path: '/blocks', bg: true }])
 
     , goHome$.flatMap(_ =>  [{ category: 'blocks',    method: 'GET', path: '/blocks' }
                               , { category: 'recent',    method: 'GET', path: '/mempool/recent' }
@@ -423,6 +443,12 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     // SEQUENTIA: fetch market-data prices once on load, for reference-currency valuation
     , !process.env.IS_ELEMENTS ? O.empty() : O.of(
                                 { category: 'prices',     method: 'GET', path: '/prices', bg: true })
+
+    // SEQUENTIA: the registered PoS committee size, to give a block's signer count
+    // a denominator. Served by serve-public.js from the node, since neither the
+    // block nor electrs knows it.
+    , !process.env.IS_ELEMENTS ? O.empty() : O.of(
+                                { category: 'pos-committee', method: 'GET', path: '/pos/committee', bg: true })
 
     // fetch asset list
     , goAssetList$.map(d => ({ category: 'assetlist',  method: 'GET', path: '/assets/registry'

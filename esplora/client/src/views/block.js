@@ -94,7 +94,20 @@ export default ({ t, block: b, blockStatus: status, blockTxs, openTx, spends, op
         { b.pos_certificate && b.pos_certificate.signer_count != null &&
           <div>
             <div>{t`PoS committee`}</div>
-            <div>{t`${b.pos_certificate.signer_count} signing member${b.pos_certificate.signer_count == 1 ? '' : 's'}`}</div>
+            <div>
+              {t`${b.pos_certificate.signer_count} signing member${b.pos_certificate.signer_count == 1 ? '' : 's'}`}
+              { /* The committee size is the one registered NOW, not this block's:
+                   a block is certified against the committee that existed when it
+                   was produced, and neither the block nor electrs records that. So
+                   it is shown as a separate, labelled figure rather than folded
+                   into "7 of 13", which would read as this block's denominator. */ }
+              { S.posCommittee > 0 &&
+                <span className="text-gray"
+                      title={t`Stakers registered in the committee now. A block is certified against the committee registered when it was produced.`}>
+                  {' '}{t`· ${S.posCommittee} registered now`}
+                </span>
+              }
+            </div>
           </div>
         }
 

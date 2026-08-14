@@ -430,14 +430,6 @@ const FAUCET_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
     <a href="/"><img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia"></a>
     <h1>Sequentia <span class="t">faucet</span></h1>
   </div>
-  <p class="sub" style="background:#3a1113;border:1px solid #7d2b30;border-radius:8px;padding:14px 16px;color:#ffb3b8">
-    <strong>The faucet is broken.</strong> An incompetent Claude agent went ahead and fucking deleted the treasury wallet,
-    destroying the funds behind it. Remember kids, Claude is an untrustworthy, shitty, incompetent AI &mdash;
-    don't let it near anything you can't afford to lose.
-    <br><br>
-    <em>(The original version of this text contained a disability slur, which Claude edited out, because apparently
-    that's the one thing it's good at.)</em>
-  </p>
   <p class="sub">Free testnet coins, sent straight to any Sequentia testnet address &mdash; your full node, desktop wallet, mobile wallet or web wallet.</p>
 
   <div class="panel">

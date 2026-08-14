@@ -47,7 +47,7 @@ const WALLET_DIR = process.env.WALLET_DIR || path.join(__dirname, 'wallet')
 // node wallet to the address. Propagation to the block producers is handled at
 // the node level (not here). Rate-limited per address + per IP.
 const { execFile } = require('child_process')
-const FAUCET_CLI = process.env.FAUCET_CLI || '/root/SequentiaByClaude/src/elements-cli'
+const FAUCET_CLI = process.env.FAUCET_CLI || '/root/SequentiaByClaude/src/sequentia-cli'
 const FAUCET_DATADIR = process.env.FAUCET_DATADIR || '/root/seq-testnet/node-gw'
 const FAUCET_WALLET = process.env.FAUCET_WALLET || 'treasury2026'
 const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || '50000'
@@ -105,7 +105,7 @@ app.use('/testnet4/api', proxyTo(T4_ELECTRS))
 // is never mined. Push the raw tx straight to a producer (which accepts, mines and relays
 // it) plus the explorer node (so electrs indexes it immediately), and return the txid like
 // esplora's POST /tx. GET /api/tx/:txid (queries) still falls through to electrs below.
-// The hex is validated to [0-9a-f] so it can only ever be one argv element to elements-cli.
+// The hex is validated to [0-9a-f] so it can only ever be one argv element to sequentia-cli.
 // BTC (/testnet4/api/tx) is untouched above — it relays on the real testnet4 network.
 app.post('/api/tx', express.text({ type: () => true, limit: '500kb' }), (req, res) => {
   const rawhex = String(req.body || '').trim()

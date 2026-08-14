@@ -91,23 +91,16 @@ export default ({ t, block: b, blockStatus: status, blockTxs, openTx, spends, op
              this chain produces now. In that form there are no embedded members
              to count, so the number comes from the population count of the
              signer bitfield. */ }
+        { /* Only how many signed, deliberately: the committee size AT THIS BLOCK is
+             not recoverable. The signer bitfield is byte-padded, so 13 registered
+             members occupy 16 bits and its width overstates them; electrs never
+             sees stake registrations; and the node's getstakerinfo answers for the
+             current tip only, with no height argument. A denominator taken from
+             today would silently be the wrong one for every older block. */ }
         { b.pos_certificate && b.pos_certificate.signer_count != null &&
           <div>
             <div>{t`PoS committee`}</div>
-            <div>
-              {t`${b.pos_certificate.signer_count} signing member${b.pos_certificate.signer_count == 1 ? '' : 's'}`}
-              { /* The committee size is the one registered NOW, not this block's:
-                   a block is certified against the committee that existed when it
-                   was produced, and neither the block nor electrs records that. So
-                   it is shown as a separate, labelled figure rather than folded
-                   into "7 of 13", which would read as this block's denominator. */ }
-              { S.posCommittee > 0 &&
-                <span className="text-gray"
-                      title={t`Stakers registered in the committee now. A block is certified against the committee registered when it was produced.`}>
-                  {' '}{t`· ${S.posCommittee} registered now`}
-                </span>
-              }
-            </div>
+            <div>{t`${b.pos_certificate.signer_count} signing member${b.pos_certificate.signer_count == 1 ? '' : 's'}`}</div>
           </div>
         }
 

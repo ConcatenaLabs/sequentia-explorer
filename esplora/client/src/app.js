@@ -280,16 +280,6 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
         .map(d => { const m = {}; for (const k in d) { const v = d[k], p = (v && typeof v === 'object') ? v.price : v; if (p > 0) m[k.toUpperCase()] = p } return m })
         .merge(extractErrors(HTTP.select('prices')).mapTo({}))
 
-  // SEQUENTIA: how many stakers are registered in the PoS committee right now, so a
-  // block's signer count can be read against something. It is deliberately not
-  // derived from the signer bitfield: that is byte-padded, so 13 members occupy 16
-  // bits and the width would overstate the committee. null until it answers, and
-  // null again if it cannot, so the view simply omits the comparison.
-  , posCommittee$ = !process.env.IS_ELEMENTS ? O.of(null) :
-      reply('pos-committee').map(d => (d && d.size) || null)
-        .merge(extractErrors(HTTP.select('pos-committee')).mapTo(null))
-        .startWith(null)
-
   // Assets List State
   , assetList$ = !process.env.IS_ELEMENTS ? O.empty() :
       reply('assetlist', true).map(r => ({ assets: r.body, total: r.headers['x-total-results'] || 493 }))
@@ -338,7 +328,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$
                      , goAddr$, addr$, addrTxs$, addrQR$
-                     , assetMap$, prices$, posCommittee$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
+                     , assetMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
                      })
 
@@ -443,12 +433,6 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     // SEQUENTIA: fetch market-data prices once on load, for reference-currency valuation
     , !process.env.IS_ELEMENTS ? O.empty() : O.of(
                                 { category: 'prices',     method: 'GET', path: '/prices', bg: true })
-
-    // SEQUENTIA: the registered PoS committee size, to give a block's signer count
-    // a denominator. Served by serve-public.js from the node, since neither the
-    // block nor electrs knows it.
-    , !process.env.IS_ELEMENTS ? O.empty() : O.of(
-                                { category: 'pos-committee', method: 'GET', path: '/pos/committee', bg: true })
 
     // fetch asset list
     , goAssetList$.map(d => ({ category: 'assetlist',  method: 'GET', path: '/assets/registry'

@@ -139,35 +139,6 @@ app.post('/api/tx', express.text({ type: () => true, limit: '500kb' }), (req, re
   })
 })
 
-// SEQUENTIA: how many stakers are registered in the PoS committee right now.
-//
-// A block's certificate says how many members signed it and, in bitfield form,
-// which ones -- but not how many there were. The bitfield is byte-padded, so 13
-// registered members occupy 16 bits and the size cannot be recovered from it.
-// electrs never sees stake registrations either, so the only source is the node.
-//
-// This is the committee as it stands NOW, which is why the block page presents it
-// as the current registration rather than as that block's denominator: a block
-// from last week was certified against whatever committee existed then, and this
-// number cannot speak for it.
-//
-// Cached, because every page load asks and the answer changes rarely.
-const POS_COMMITTEE_TTL_MS = Number(process.env.POS_COMMITTEE_TTL_MS || 30000)
-let posCommitteeCache = { at: 0, size: null }
-app.get('/api/pos/committee', (req, res) => {
-  const now = Date.now()
-  if (posCommitteeCache.size != null && now - posCommitteeCache.at < POS_COMMITTEE_TTL_MS)
-    return res.json({ size: posCommitteeCache.size, cached: true })
-  execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getstakerinfo'], { timeout: 8000 }, (err, stdout) => {
-    if (err) return res.status(502).json({ error: 'node unavailable' })
-    let size
-    try { size = Object.keys(JSON.parse(stdout)).length }
-    catch (e) { return res.status(502).json({ error: 'unparseable getstakerinfo' }) }
-    posCommitteeCache = { at: now, size }
-    res.json({ size })
-  })
-})
-
 app.use('/api', proxyTo(SEQ_ELECTRS))
 
 // Sequentia Asset Registry (asset metadata). Mount strips /registry, so the

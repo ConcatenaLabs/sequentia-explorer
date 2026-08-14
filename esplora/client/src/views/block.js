@@ -170,7 +170,11 @@ export default ({ t, block: b, blockStatus: status, blockTxs, openTx, spends, op
 
       <div className="transactions">
         <h3 className="font-h3">{txsShownText(b.tx_count, goBlock.start_index, blockTxs && blockTxs.length, t)}</h3>
-        { blockTxs ? blockTxs.map(tx => txBox( { ...tx, status: txsStatus }, { openTx, tipHeight, t, spends }))
+        { /* ...S carries assetMap and prices, which txBox needs to show a ticker
+             and a reference-currency value instead of a truncated asset id. Every
+             other caller spreads it; this one listed its context by hand, so the
+             block page was the one place an amount stayed anonymous. */ }
+        { blockTxs ? blockTxs.map(tx => txBox( { ...tx, status: txsStatus }, { ...S, openTx, tipHeight, t, spends }))
                    : loader() }
       </div>
 

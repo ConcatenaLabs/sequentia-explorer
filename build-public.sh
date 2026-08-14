@@ -14,7 +14,16 @@ rm -rf dist   # clean so no stale root-served Sequentia build lingers after the 
 REL_MENU='{"Sequentia Testnet":"/explorer/","Bitcoin Testnet4":"/testnet4/"}'
 
 # --- Sequentia under /explorer/ ---
+# ASSET_MAP_URL is what makes an amount show its ticker instead of an asset id.
+# Without it the client does not merely fail to fetch the map, it hardcodes an
+# empty one (app.js: `!process.env.ASSET_MAP_URL ? O.of({})`), so every asset
+# falls back to a truncated id no matter how well it is registered. The Asset
+# Registry already publishes exactly the shape the client expects -- asset id ->
+# [domain, ticker, name, precision, verified] -- and paths under /registry are
+# origin-absolute, so this points at the registry itself rather than a copy that
+# could go stale.
 DEST=dist/explorer BASE_HREF=/explorer/ API_URL=/api \
+  ASSET_MAP_URL=/registry/index.minimal.json \
   MENU_ITEMS="$REL_MENU" \
   PARENT_CHAIN_EXPLORER_BLOCK='/testnet4/block/{hash}' \
   ./build.sh sequentia-testnet

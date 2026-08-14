@@ -36,7 +36,7 @@ export default ({ t, asset, assetTxs, goAsset, openTx, spends, tipHeight, loadin
 
       // SEQUENTIA: fall back to the Asset Registry (assetMap) for metadata that
       // electrs doesn't carry on-chain (name/ticker/precision/issuer domain).
-      , [ reg_domain, reg_ticker, reg_name, reg_precision ] = (assetMap && assetMap[asset.asset_id]) || []
+      , [ reg_domain, reg_ticker, reg_name, reg_precision, reg_verified, reg_supervised ] = (assetMap && assetMap[asset.asset_id]) || []
       , disp_name = asset.name || reg_name
       , disp_ticker = asset.ticker || reg_ticker
       , disp_precision = asset.precision != null ? asset.precision : (reg_precision != null ? reg_precision : 0)
@@ -173,6 +173,17 @@ export default ({ t, asset, assetTxs, goAsset, openTx, spends, tipHeight, loadin
               , <div>
                   <div>{t`Number of issuances`}</div>
                   <div>{chain_stats.issuance_count}</div>
+                </div>
+
+              , reg_supervised && <div>
+                  {/* SEQUENTIA: the issuer of this asset can freeze holdings of
+                      it by consensus rule. Committed in the asset id, so it can
+                      never be added or removed. Shown here because the explorer
+                      is where anyone goes to find out what an asset actually is. */}
+                  <div>{t`Supervision`}</div>
+                  <div title={t`The issuer can freeze holdings at ordinary addresses. Funds in a Lightning channel, an HTLC or another shared contract are out of reach, and the issuer can never spend anyone's coins. This is part of the asset's identity and cannot be added or removed later.`}>
+                    {t`Issuer can freeze holders`}
+                  </div>
                 </div>
 
               , mempool_stats.issuance_count > 0 && <div>

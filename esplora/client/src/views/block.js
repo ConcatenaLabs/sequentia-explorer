@@ -85,11 +85,16 @@ export default ({ t, block: b, blockStatus: status, blockTxs, openTx, spends, op
           </div>
         }
 
-        { /* SEQUENTIA: PoS BLS committee that certified this block */ }
-        { b.pos_certificate &&
+        { /* SEQUENTIA: PoS BLS committee that certified this block.
+             The count is signer_count: the API renamed it from member_count when
+             it learned to decode bitfield certificates, which is the only form
+             this chain produces now. In that form there are no embedded members
+             to count, so the number comes from the population count of the
+             signer bitfield. */ }
+        { b.pos_certificate && b.pos_certificate.signer_count != null &&
           <div>
             <div>{t`PoS committee`}</div>
-            <div>{t`${b.pos_certificate.member_count} signing member${b.pos_certificate.member_count == 1 ? '' : 's'}`}</div>
+            <div>{t`${b.pos_certificate.signer_count} signing member${b.pos_certificate.signer_count == 1 ? '' : 's'}`}</div>
           </div>
         }
 
@@ -183,15 +188,28 @@ const posCertRows = (cert, t) => [
     <div>{t`BLS aggregate`}</div>
     <div className="mono">{cert.agg_sig}</div>
   </div>
-, ...cert.members.map((m, i) =>
-    <div>
-      <div>{t`Committee member ${i + 1}`}</div>
-      <div className="mono">
-        <div>{t`secp256k1`}: {m.secp_pubkey}</div>
-        <div className="text-gray">{t`BLS`}: {m.bls_pubkey}</div>
-      </div>
-    </div>
-  )
+  // A certificate comes in one of two forms and the API sends only the fields of
+  // the one it found. The full-member form embeds every signing member's keys;
+  // the bitfield form -- the only one this chain produces now -- says which
+  // registered committee members signed and embeds nobody, so `members` is absent
+  // entirely. Mapping over it unconditionally threw a TypeError and took the
+  // whole advanced-details panel down with it.
+, ...(cert.members
+    ? cert.members.map((m, i) =>
+        <div>
+          <div>{t`Committee member ${i + 1}`}</div>
+          <div className="mono">
+            <div>{t`secp256k1`}: {m.secp_pubkey}</div>
+            <div className="text-gray">{t`BLS`}: {m.bls_pubkey}</div>
+          </div>
+        </div>
+      )
+    : cert.signer_bitfield
+    ? [ <div>
+          <div>{t`Signer bitfield`}</div>
+          <div className="mono">{cert.signer_bitfield}</div>
+        </div> ]
+    : [])
 ]
 
 const txsShownText = (total, start, shown, t) =>

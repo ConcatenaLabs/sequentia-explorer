@@ -43,40 +43,46 @@
   <div class="wrap">
     <img class="brand" src="sequentia-logo.svg" alt="Sequentia" height="52">
     <h1>Downloads</h1>
-    <p class="sub">Full node, desktop wallet, the Fulmen Lightning wallet &amp; the Ambra mobile wallet for Sequentia testnet: Proof-of-Stake, Bitcoin-anchored.</p>
-    <span class="ver">version 23.3.3 · testnet</span>
+    <p class="sub">Full node, desktop wallet, Fulmen (a SeqLN Lightning node with a desktop GUI), the Ambra mobile wallet &amp; the browser extension wallet for Sequentia testnet: Proof-of-Stake, Bitcoin-anchored.</p>
+    <span class="ver">version 23.3.5 · testnet</span>
 
     <div class="grid">
       <div class="card">
         <div class="os">Linux · x86-64</div>
         <h2>Desktop wallet + node</h2>
-        <div class="file">sequentia-core-23.3.3-linux-x86_64.tar.gz</div>
-        <a class="dl" href="sequentia-core-23.3.3-linux-x86_64.tar.gz" download>↓ Download for Linux</a>
+        <div class="file">sequentia-core-23.3.5-linux-x86_64.tar.gz</div>
+        <a class="dl" href="sequentia-core-23.3.5-linux-x86_64.tar.gz" download>↓ Download for Linux</a>
       </div>
       <div class="card">
         <div class="os">Windows · 64-bit</div>
         <h2>Installer (.exe)</h2>
-        <div class="file">sequentia-core-23.3.3-win64-setup.exe</div>
-        <a class="dl" href="sequentia-core-23.3.3-win64-setup.exe" download>↓ Download for Windows</a>
+        <div class="file">sequentia-core-23.3.5-win64-setup.exe</div>
+        <a class="dl" href="sequentia-core-23.3.5-win64-setup.exe" download>↓ Download for Windows</a>
       </div>
       <div class="card">
         <div class="os">Linux · x86-64</div>
-        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
+        <h2>Fulmen ⚡ SeqLN node + desktop GUI <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
         <div class="file">Fulmen-0.2.0-linux-x86_64.AppImage</div>
         <a class="dl" href="Fulmen-0.2.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
       </div>
       <div class="card">
         <div class="os">Windows · 64-bit</div>
-        <h2>Fulmen ⚡ Lightning wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
+        <h2>Fulmen ⚡ SeqLN node + desktop GUI <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.0 · testnet preview</span></h2>
         <div class="file">Fulmen-Setup-0.2.0.exe</div>
         <a class="dl" href="Fulmen-Setup-0.2.0.exe" download>↓ Download for Windows</a>
         <div style="margin-top:8px;font-size:12px"><a href="Fulmen-0.2.0-win64.zip" download style="color:var(--dim)">portable zip instead</a></div>
       </div>
       <div class="card">
         <div class="os">Android · arm64 + x86-64</div>
-        <h2>Ambra wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.11.0 · testnet preview</span></h2>
-        <div class="file">ambra-0.11.0-android-testnet.apk</div>
-        <a class="dl" href="ambra-0.11.0-android-testnet.apk" download>↓ Download for Android</a>
+        <h2>Ambra wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.16.4 · testnet preview</span></h2>
+        <div class="file">ambra-0.16.4.apk</div>
+        <a class="dl" href="ambra-0.16.4.apk" download>↓ Download for Android</a>
+      </div>
+      <div class="card">
+        <div class="os">Chrome · Chromium browsers</div>
+        <h2>Browser extension wallet <span style="color:var(--dim);font-weight:400;font-size:14px">· v0.2.3 · testnet preview</span></h2>
+        <div class="file">sequentia-wallet-extension-0.2.3.zip</div>
+        <a class="dl" href="sequentia-wallet-extension-0.2.3.zip" download>↓ Download for Chrome</a>
       </div>
     </div>
 
@@ -94,8 +100,9 @@
       The wallet connects to the Sequentia testnet automatically.
     </p>
     <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Fulmen ⚡</b> (v0.2.0, testnet preview) is a desktop wallet for <b>SeqLN</b>, the Sequentia Lightning Network,
-      with a full SeqLN node bundled inside: no separate install or setup. On first run it asks for the RPC of a
+      <b>Fulmen ⚡</b> (v0.2.0, testnet preview) is a graphical interface to <b>SeqLN</b>, the Sequentia Lightning
+      Network, with a full SeqLN node bundled inside: running Fulmen is running a Lightning node, not connecting to
+      somebody else's, and there is no separate install or setup. On first run it asks for the RPC of a
       Sequentia node (yours, local or remote) and starts its own Lightning node against it; optionally it also runs
       Lightning on Bitcoin testnet4 if you point it at a Bitcoin node. It surfaces what makes Sequentia Lightning
       different: asset channels (each channel carries an issued asset), any-asset payments (<code>pay asset=</code>)
@@ -103,11 +110,22 @@
       untested preview, and you can always connect Fulmen to a remote SeqLN node instead.
     </p>
     <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Ambra</b> (v0.10.3) is a non-custodial Sequentia mobile wallet, testnet preview.
+      <b>Ambra</b> (v0.16.4) is a non-custodial Sequentia mobile wallet, testnet preview.
       Create/import with a biometric lock, multi-asset balances, receive (QR + confidential),
       send with any-asset fees, history, RBF/CPFP rescue, asset issuance, and staking. Built on SWK.
-      This release adds OpenAMP support: hold and transfer issuer-governed (restricted) assets, with
-      transfers co-signed by the asset's policy server and fees paid by conversion.
+      Includes OpenAMP restricted assets (transfers co-signed by the asset's policy server, fees paid
+      by conversion) and the SeqDEX trading terminal: market and limit orders with same-chain and
+      cross-chain settlement, on-chain or over Lightning.
+    </p>
+    <p style="color:var(--dim);font-size:13px;margin-top:10px">
+      <b>Sequentia Wallet</b> (v0.1.1, testnet preview) is a non-custodial browser extension for Chrome and other
+      Chromium browsers. One seed drives both chains: Bitcoin testnet4 and Sequentia share the same address.
+      Multi-asset balances with a portfolio total, send and receive with any-asset fees, transaction history,
+      Lightning for BTC and issued assets, OpenAMP restricted assets, and a <code>window.sequentia</code> API
+      that lets websites connect to the wallet. To install: download the zip, unzip it, open
+      <code>chrome://extensions</code>, enable Developer mode, click <b>Load unpacked</b> and select the unzipped
+      folder. Source and protocol docs on
+      <a href="https://github.com/GracedEternalKingCabbageMan/sequentia-extension" target="_blank" rel="noopener" style="color:var(--amber2)">GitHub</a>.
     </p>
 
     <div class="foot">

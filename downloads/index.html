@@ -13,29 +13,39 @@
   .wrap{max-width:880px;margin:0 auto;padding:64px 24px 80px}
   .brand{height:52px;width:auto;display:block}
   h1{font-size:34px;margin:24px 0 6px;letter-spacing:-.02em}
-  .sub{color:var(--dim);font-size:17px;margin:0 0 8px}
-  .ver{display:inline-block;margin-top:14px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;
-       color:var(--amber2);font-size:13px;letter-spacing:.04em}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:40px 0}
+  .sub{color:var(--dim);font-size:17px;margin:0 0 8px;max-width:620px}
+  .chain{display:inline-block;margin-top:14px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;
+         color:var(--amber2);font-size:13px;letter-spacing:.04em}
+  .prod{margin:52px 0 0;padding-top:30px;border-top:1px solid var(--line)}
+  .phead{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px}
+  .phead h2{font-size:24px;margin:0;letter-spacing:-.01em}
+  .ver{padding:3px 10px;border:1px solid var(--line);border-radius:999px;color:var(--amber2);
+       font-size:12px;letter-spacing:.04em;white-space:nowrap}
+  .tag{color:var(--dim);font-size:13px}
+  .pdesc{color:var(--dim);font-size:15px;margin:12px 0 0;max-width:680px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0 0}
   @media(max-width:640px){.grid{grid-template-columns:1fr}}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;display:flex;flex-direction:column}
   .os{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-  .card h2{font-size:21px;margin:8px 0 2px}
+  .card h3{font-size:18px;margin:8px 0 2px;font-weight:600}
   .card .file{color:var(--dim);font-size:13px;word-break:break-all;margin-bottom:18px}
   .dl{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;gap:8px;
       background:linear-gradient(135deg,var(--amber),var(--amber2));color:#1a1200;font-weight:700;
       text-decoration:none;padding:12px 18px;border-radius:10px;transition:transform .08s ease,filter .15s ease}
   .dl:hover{filter:brightness(1.06);transform:translateY(-1px)}
-  .feat{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin:28px 0 0}
+  .feat{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;margin:22px 0 0}
   @media(max-width:640px){.feat{grid-template-columns:1fr}}
   .feat div{padding-left:22px;position:relative;color:var(--dim);font-size:15px}
   .feat div::before{content:"";position:absolute;left:0;top:9px;width:9px;height:9px;border-radius:2px;
                     background:var(--amber);transform:rotate(45deg)}
   .feat b{color:var(--txt);font-weight:600}
-  .foot{margin-top:48px;padding-top:22px;border-top:1px solid var(--line);color:var(--dim);font-size:14px;
+  .install{color:var(--dim);font-size:13px;margin:20px 0 0}
+  .install b{color:var(--txt)}
+  .foot{margin-top:56px;padding-top:22px;border-top:1px solid var(--line);color:var(--dim);font-size:14px;
         display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
   .foot a{color:var(--amber2);text-decoration:none}
   .foot .by-logo{height:15px;width:auto;vertical-align:middle;opacity:.9;margin-left:5px}
+  a.inline{color:var(--amber2);text-decoration:none}
   code{background:#0b0e12;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:13px;color:#c9d4df}
 </style>
 </head>
@@ -43,87 +53,144 @@
   <div class="wrap">
     <img class="brand" src="sequentia-logo.svg" alt="Sequentia" height="52">
     <h1>Downloads</h1>
-    <p class="sub">Sequentia Core, Fulmen and Ambra, for Sequentia testnet: Proof-of-Stake, Bitcoin-anchored.</p>
-    <span class="ver">version 23.3.5 · testnet</span>
+    <p class="sub">Software for the Sequentia testnet, a proof-of-stake sidechain where every block commits to a
+      Bitcoin testnet4 header, addresses are transparent by default, and fees are payable in any accepted asset.</p>
+    <span class="chain">testnet · coins and assets have no value</span>
 
-    <div class="grid">
-      <div class="card">
-        <div class="os">Linux · x86-64</div>
-        <h2>Sequentia Core node + desktop wallet</h2>
-        <div class="file">sequentia-core-23.3.5-linux-x86_64.tar.gz</div>
-        <a class="dl" href="sequentia-core-23.3.5-linux-x86_64.tar.gz" download>↓ Download for Linux</a>
+    <!-- ─────────────────────────  Sequentia Core  ───────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Sequentia Core</h2>
+        <span class="ver" data-ver="node">version 24.1.0</span>
       </div>
-      <div class="card">
-        <div class="os">Windows · 64-bit</div>
-        <h2>Sequentia Core node + desktop wallet</h2>
-        <div class="file">sequentia-core-23.3.5-win64-setup.exe</div>
-        <a class="dl" href="sequentia-core-23.3.5-win64-setup.exe" download>↓ Download for Windows</a>
+      <p class="pdesc">The full node and its desktop wallet. It validates the chain for itself rather than trusting
+        a server, and it is the software a block producer runs.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Linux · x86-64</div>
+          <h3>Node + desktop wallet</h3>
+          <div class="file">sequentia-core-24.1.0-linux-x86_64.tar.gz</div>
+          <a class="dl" href="sequentia-core-24.1.0-linux-x86_64.tar.gz" download>↓ Download for Linux</a>
+        </div>
+        <div class="card">
+          <div class="os">Windows · 64-bit</div>
+          <h3>Node + desktop wallet</h3>
+          <div class="file">sequentia-core-24.1.0-win64-setup.exe</div>
+          <a class="dl" href="sequentia-core-24.1.0-win64-setup.exe" download>↓ Download for Windows</a>
+        </div>
       </div>
-      <div class="card">
-        <div class="os">Linux · x86-64</div>
-        <h2>Fulmen ⚡ SeqLN node + desktop GUI <span style="color:var(--dim);font-weight:400;font-size:14px">· testnet preview</span></h2>
-        <div class="file">Fulmen-0.2.0-linux-x86_64.AppImage</div>
-        <a class="dl" href="Fulmen-0.2.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
+      <div class="feat">
+        <div><b>Wallet</b>: send, receive and issue assets; tSEQ is one asset among them.</div>
+        <div><b>Staking tab</b>: committee schedule, stake weights and staking-output tools.</div>
+        <div><b>Anchor watching</b>: follows Bitcoin testnet4 and reorgs when it does.</div>
+        <div><b>Any-asset fees</b>: pay a fee in whichever asset a producer accepts.</div>
       </div>
-      <div class="card">
-        <div class="os">Windows · 64-bit</div>
-        <h2>Fulmen ⚡ SeqLN node + desktop GUI <span style="color:var(--dim);font-weight:400;font-size:14px">· testnet preview</span></h2>
-        <div class="file">Fulmen-Setup-0.2.0.exe</div>
-        <a class="dl" href="Fulmen-Setup-0.2.0.exe" download>↓ Download for Windows</a>
-        <div style="margin-top:8px;font-size:12px"><a href="Fulmen-0.2.0-win64.zip" download style="color:var(--dim)">portable zip instead</a></div>
-      </div>
-      <div class="card">
-        <div class="os">Android · arm64 + x86-64</div>
-        <h2>Ambra for Android <span style="color:var(--dim);font-weight:400;font-size:14px">· testnet preview</span></h2>
-        <div class="file">ambra-0.16.4.apk</div>
-        <a class="dl" href="ambra-0.16.4.apk" download>↓ Download for Android</a>
-      </div>
-      <div class="card">
-        <div class="os">Chrome · Chromium browsers</div>
-        <h2>Ambra for Chromium <span style="color:var(--dim);font-weight:400;font-size:14px">· testnet preview</span></h2>
-        <div class="file">ambra-0.5.1-chromium.zip</div>
-        <a class="dl" href="ambra-0.5.1-chromium.zip" download>↓ Download for Chrome</a>
-      </div>
-    </div>
+      <p class="install"><b>Install</b> · Linux: extract the tarball and run <code>bin/sequentia-qt</code>.
+        Windows: run the installer, then launch <b>Sequentia Core</b>. It connects to the testnet on its own.</p>
+    </section>
 
-    <div class="feat">
-      <div><b>Built-in wallet</b>: send, receive, and manage tSEQ &amp; issued assets.</div>
-      <div><b>Staking tab</b>: live committee schedule, stake weights, and staking-output tools.</div>
-      <div><b>Bitcoin-anchored</b>: every block commits to a Bitcoin testnet4 anchor.</div>
-      <div><b>Proof-of-Stake</b>: BLS committee certification with quorum.</div>
-    </div>
+    <!-- ─────────────────────────────  Fulmen  ───────────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Fulmen ⚡</h2>
+        <span class="ver" data-ver="fulmen">version 0.2.0</span>
+        <span class="tag">testnet preview</span>
+      </div>
+      <p class="pdesc">A desktop wallet for <b>SeqLN</b>, the Sequentia Lightning Network, with a full SeqLN node
+        bundled in. Point it at a Sequentia node's RPC on first run and it starts Lightning against it; add a
+        Bitcoin node and it runs Lightning on testnet4 as well.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Linux · x86-64</div>
+          <h3>SeqLN node + desktop GUI</h3>
+          <div class="file">Fulmen-0.2.0-linux-x86_64.AppImage</div>
+          <a class="dl" href="Fulmen-0.2.0-linux-x86_64.AppImage" download>↓ Download for Linux</a>
+        </div>
+        <div class="card">
+          <div class="os">Windows · 64-bit</div>
+          <h3>SeqLN node + desktop GUI</h3>
+          <div class="file">Fulmen-Setup-0.2.0.exe</div>
+          <a class="dl" href="Fulmen-Setup-0.2.0.exe" download>↓ Download for Windows</a>
+          <div style="margin-top:8px;font-size:12px"><a href="Fulmen-0.2.0-win64.zip" download style="color:var(--dim)">portable zip instead</a></div>
+        </div>
+      </div>
+      <div class="feat">
+        <div><b>Asset channels</b>: Lightning channels denominated in issued assets, not only BTC.</div>
+        <div><b>Any-asset payments</b>: <code>pay asset=</code> chooses what a payment moves.</div>
+        <div><b>Per-asset balances</b>: channel liquidity broken out by asset.</div>
+        <div><b>Windows</b>: the node runs inside WSL2, installed on demand.</div>
+      </div>
+      <p class="install"><b>Install</b> · Linux: make the <code>.AppImage</code> executable and run it.
+        Windows: run the installer (one click, for your user account), or take the portable zip and run
+        <code>Fulmen.exe</code>.</p>
+    </section>
 
-    <p style="color:var(--dim);font-size:14px;margin-top:30px">
-      <b>Sequentia Core</b> · Linux: extract and run <code>bin/sequentia-qt</code>; Windows: run the installer, then launch <b>Sequentia Core</b>.
-      <b>Fulmen</b> · Linux: make the <code>.AppImage</code> executable and run it; Windows: run the installer (one click, installs for your user account), or use the portable zip and run <code>Fulmen.exe</code>.
-      <b>Ambra</b> · Android: allow “install unknown apps”, then open the <code>.apk</code>.
-      The wallet connects to the Sequentia testnet automatically.
-    </p>
-    <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Fulmen ⚡</b> (testnet preview) is a desktop GUI for <b>SeqLN</b>, the Sequentia Lightning Network,
-      with a full SeqLN node bundled in. Point it at a Sequentia node's RPC on first run and it starts Lightning
-      against it; add a Bitcoin node to run Lightning on testnet4 too. It gives you asset channels, any-asset
-      payments (<code>pay asset=</code>) and per-asset balances. On Windows the node runs inside WSL2, installed on
-      demand.
-    </p>
-    <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Ambra for Android</b> (testnet preview) is a non-custodial Sequentia mobile wallet.
-      Create/import with a biometric lock, multi-asset balances, receive (QR + confidential),
-      send with any-asset fees, history, RBF/CPFP rescue, asset issuance, and staking. Built on SWK.
-      Includes OpenAMP restricted assets (transfers co-signed by the asset's policy server, fees paid
-      by conversion) and the SeqDEX trading terminal: market and limit orders with same-chain and
-      cross-chain settlement, on-chain or over Lightning.
-    </p>
-    <p style="color:var(--dim);font-size:13px;margin-top:10px">
-      <b>Ambra for Chromium</b> (testnet preview) is a non-custodial browser extension for Chrome and other
-      Chromium browsers. One seed drives both chains: Bitcoin testnet4 and Sequentia share the same address.
-      Multi-asset balances with a portfolio total, send and receive with any-asset fees, transaction history,
-      Lightning for BTC and issued assets, OpenAMP restricted assets, and a <code>window.sequentia</code> API
-      that lets websites connect to the wallet. To install: download the zip, unzip it, open
-      <code>chrome://extensions</code>, enable Developer mode, click <b>Load unpacked</b> and select the unzipped
-      folder. Source and protocol docs on
-      <a href="https://github.com/GracedEternalKingCabbageMan/sequentia-extension" target="_blank" rel="noopener" style="color:var(--amber2)">GitHub</a>.
-    </p>
+    <!-- ───────────────────────  Ambra for Android  ──────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Ambra for Android</h2>
+        <span class="ver" data-ver="ambra">version 0.16.4</span>
+        <span class="tag">testnet preview</span>
+      </div>
+      <p class="pdesc">A non-custodial dual-chain mobile wallet: one recovery phrase for Bitcoin testnet4 and
+        Sequentia, sharing one <code>tb1</code> address, so BTC is a first-class asset rather than an add-on.
+        Built on SWK, the Sequentia Wallet Kit.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Android · arm64 + x86-64</div>
+          <h3>Mobile wallet</h3>
+          <div class="file">ambra-0.16.4.apk</div>
+          <a class="dl" href="ambra-0.16.4.apk" download>↓ Download for Android</a>
+        </div>
+        <div class="card">
+          <div class="os">What is inside</div>
+          <h3>Wallet, assets, trading</h3>
+          <div class="file">Biometric lock · issuance · staking · SeqDEX terminal</div>
+          <a class="dl" href="https://github.com/GracedEternalKingCabbageMan/ambra" target="_blank" rel="noopener">Source on GitHub</a>
+        </div>
+      </div>
+      <div class="feat">
+        <div><b>Total first</b>: one portfolio total in your reference currency, every asset an equal row.</div>
+        <div><b>Send and receive</b>: any-asset fees, opt-in confidential addresses, RBF and CPFP rescue.</div>
+        <div><b>Issue assets</b>: create and reissue your own, including OpenAMP restricted assets.</div>
+        <div><b>SeqDEX terminal</b>: market and limit orders, same-chain or cross-chain, on-chain or over Lightning.</div>
+      </div>
+      <p class="install"><b>Install</b> · Allow “install unknown apps” for your browser, then open the
+        <code>.apk</code>. There is no iOS build.</p>
+    </section>
+
+    <!-- ──────────────────────  Ambra for Chromium  ──────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Ambra for Chromium</h2>
+        <span class="ver" data-ver="extension">version 0.5.12</span>
+        <span class="tag">testnet preview</span>
+      </div>
+      <p class="pdesc">The same dual-chain wallet as a browser extension for Chrome and other Chromium browsers,
+        plus a <code>window.sequentia</code> API that lets a website ask the wallet to connect, sign and pay.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Chrome · Chromium browsers</div>
+          <h3>Browser extension</h3>
+          <div class="file">ambra-0.5.12-chromium.zip</div>
+          <a class="dl" href="ambra-0.5.12-chromium.zip" download>↓ Download for Chrome</a>
+        </div>
+        <div class="card">
+          <div class="os">What is inside</div>
+          <h3>Both chains, one seed</h3>
+          <div class="file">Balances · send · receive · Lightning · dapp API</div>
+          <a class="dl" href="https://github.com/GracedEternalKingCabbageMan/sequentia-extension" target="_blank" rel="noopener">Source on GitHub</a>
+        </div>
+      </div>
+      <div class="feat">
+        <div><b>One seed, both chains</b>: Bitcoin testnet4 and Sequentia share the same address.</div>
+        <div><b>Portfolio total</b>: multi-asset balances with any-asset fees on send.</div>
+        <div><b>Lightning</b>: for BTC and for issued assets.</div>
+        <div><b>OpenAMP</b>: hold and transfer issuer-governed restricted assets.</div>
+      </div>
+      <p class="install"><b>Install</b> · Unzip the download, open <code>chrome://extensions</code>, enable
+        Developer mode, click <b>Load unpacked</b> and select the unzipped folder.</p>
+    </section>
 
     <div class="foot">
       <span>Built by <a href="https://concatenalabs.com" target="_blank" rel="noopener"><img class="by-logo" src="concatena-labs.png" alt="Concatena Labs"></a></span>

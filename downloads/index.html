@@ -125,6 +125,46 @@
         <code>Fulmen.exe</code>.</p>
     </section>
 
+    <!-- ────────────────────────────  Seqognito  ─────────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Seqognito 🕶</h2>
+        <span class="ver" data-ver="seqognito">version 0.1.0</span>
+        <span class="tag">testnet preview</span>
+      </div>
+      <p class="pdesc">A wallet for mixing. Your coins go into one transaction together with other people's and come
+        out somewhere nobody can follow &mdash; and because Sequentia has confidential transactions, the amounts are
+        hidden too: every output of the round, your change included, is a commitment rather than a number. It holds
+        Bitcoin and Sequentia assets, receives and sends, and deliberately does nothing else.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Linux &middot; x86-64</div>
+          <h3>Mixing wallet</h3>
+          <div class="file">Seqognito-0.1.0-linux-x86_64.AppImage</div>
+          <a class="dl" href="Seqognito-0.1.0-linux-x86_64.AppImage" download>&darr; Download for Linux</a>
+        </div>
+        <div class="card">
+          <div class="os">Windows &middot; 64-bit</div>
+          <h3>Mixing wallet</h3>
+          <div class="file">Seqognito-Setup-0.1.0.exe</div>
+          <a class="dl" href="Seqognito-Setup-0.1.0.exe" download>&darr; Download for Windows</a>
+          <div style="margin-top:8px;font-size:12px"><a href="Seqognito-0.1.0-win64.zip" download style="color:var(--dim)">portable zip instead</a></div>
+        </div>
+      </div>
+      <div class="feat">
+        <div><b>Everything over Tor</b>: the window has no network of its own, and the wallet will not send anything without a SOCKS proxy.</div>
+        <div><b>Two circuits, not one</b>: your coins and your mixed addresses are registered over separate Tor circuits, so the coordinator sees two strangers.</div>
+        <div><b>Any node you like</b>: point it at your own Sequentia and Bitcoin endpoints, <code>.onion</code> included.</div>
+        <div><b>Bitcoin too</b>: parent-chain BTC is bridged in, mixed, and sent back out to an address you have never used.</div>
+      </div>
+      <p class="install"><b>Install</b> &middot; You need Tor running &mdash; a system <code>tor</code> daemon (port 9050) or Tor
+        Browser (9150). Linux: make the <code>.AppImage</code> executable and run it. Windows: run the installer, or take
+        the portable zip. On first start it asks which nodes to use, and encrypts your recovery phrase with a passphrase.</p>
+      <p class="install"><b>What it does and does not hide</b> &middot; The chain learns nothing about the amounts. The
+        coordinator cannot link your coins to your mixed outputs, though it does see your amounts and your change. Your
+        anonymity set is the round you were in &mdash; a round with two people in it hides you among two.</p>
+    </section>
+
     <!-- ───────────────────────  Ambra for Android  ──────────────────────── -->
     <section class="prod">
       <div class="phead">

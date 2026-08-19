@@ -159,6 +159,46 @@
         <code>.apk</code>. There is no iOS build.</p>
     </section>
 
+    <!-- ──────────────────────  Pignus CLI  ──────────────────────── -->
+    <section class="prod">
+      <div class="phead">
+        <h2>Pignus CLI</h2>
+        <span class="ver" data-ver="pignus">version 0.1.0</span>
+        <span class="tag">testnet preview</span>
+      </div>
+      <p class="pdesc">Collateralised lending from the command line, against your own node.
+        Everything <a href="/lending/">the lending site</a> does &mdash; propose a loan, publish a
+        funded offer, borrow, repay, liquidate &mdash; plus the one check the whole thing rests on:
+        rebuild a vault&rsquo;s address from the terms you agreed and refuse to sign if it differs.</p>
+      <div class="grid">
+        <div class="card">
+          <div class="os">Linux · macOS · anywhere with Python 3</div>
+          <h3>Source archive</h3>
+          <div class="file">pignus-cli-0.1.0.tar.gz</div>
+          <a class="dl" href="pignus-cli-0.1.0.tar.gz" download>&darr; Download the CLI</a>
+        </div>
+        <div class="card">
+          <div class="os">What is inside</div>
+          <h3>CLI, oracle and liquidator</h3>
+          <div class="file">pignus-cli · pignus-oracle · pignus-liquidator · pignusd</div>
+          <a class="dl" href="https://github.com/GracedEternalKingCabbageMan/pignus" target="_blank" rel="noopener">Source on GitHub</a>
+        </div>
+      </div>
+      <div class="feat">
+        <div><b>Verify before you sign</b>: <code>pignus-cli verify</code> rebuilds the vault address
+          from your terms and refuses if one atom of the debt, the strike or the oracle differs.</div>
+        <div><b>Run your own oracle</b>: sign prices for your own markets and publish every
+          attestation, so a liquidation can always be checked afterwards.</div>
+        <div><b>Run your own liquidator</b>: liquidation is a permissionless race and anyone may
+          enter it. Nothing about Pignus depends on the operator&rsquo;s bot.</div>
+      </div>
+      <p class="note">Pure Python, no build step. It needs a Sequentia <b>source</b> checkout, because
+        the loan covenant lives in the node repository and Pignus imports the proven builder rather
+        than carrying a copy of it: set <code>SEQUENTIA_SRC</code> and run
+        <code>tests/cli_drill.sh</code> to check the wiring. sha256
+        <code>00e91efc5989b5ee7acac14c4dde0f908bf114bc1501e232c2043499fc9610ca</code></p>
+    </section>
+
     <!-- ──────────────────────  Ambra for Chromium  ──────────────────────── -->
     <section class="prod">
       <div class="phead">

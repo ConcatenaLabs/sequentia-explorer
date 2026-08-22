@@ -58,18 +58,33 @@ Block objects (`GET /block/:hash`, `GET /blocks`) carry additional fields:
   ```
 
 - `pos_certificate` *(optional)*: the decoded proof-of-stake BLS committee
-  certificate, with `leader_sig`, `agg_sig` (the BLS aggregate signature) and
-  `members`, an array of signing committee members
-  (`secp_pubkey`, `vrf_proof`, `bls_pubkey`, `bls_pop`). Only present when the
-  block's proof solution decodes as a BLS committee certificate; omitted
-  otherwise.
-- `finalized` *(optional, `GET /block/:hash` only)*: whether the block is
-  checkpoint-finalized. Omitted when finality information is unavailable.
+  certificate: `leader_sig`, `agg_sig` (the BLS aggregate signature),
+  `signer_count`, plus one form-specific field. Blocks on the current public
+  testnet (public fixed-size committee) carry `signer_bitfield`, a hex
+  bitfield in the registered committee's order, bit `i` (LSB-first within
+  each byte) set meaning "committee member `i` signed"; `signer_count` is its
+  popcount. Legacy blocks whose solution embeds member records instead carry
+  `members`, an array of signing committee members (`secp_pubkey`,
+  `vrf_proof`, `bls_pubkey`, `bls_pop`). Only present when the block's proof
+  solution decodes as a BLS committee certificate; omitted otherwise.
+- `finalized` *(optional, `GET /block/:hash` only)*: declared as "whether the
+  block is checkpoint-finalized", but the current indexer never sets it
+  (`/block` is served purely from the index with no node RPC). Read finality
+  from `GET /sequentia/checkpoints` instead.
 
 Sequentia blocks are certified by a proof-of-stake committee, so the PoW
 fields (`bits`, `nonce`, `difficulty`) are absent; the raw block proof is
 exposed as `ext.challenge` / `ext.solution` (the [Block format](#block-format)
 section below calls this object `proof`).
+
+### `GET /sequentia/checkpoints`
+
+Sequentia only. Passthrough of the node's `getcheckpointinfo` RPC: checkpoint
+depth, finalized height and known checkpoints. Example:
+
+```json
+{"checkpoints":[],"configured":[],"conflicts":[],"depth":2016,"finalized_height":-1}
+```
 
 ### `GET /sequentia/anchorstatus`
 

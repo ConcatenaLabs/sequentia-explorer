@@ -27,21 +27,30 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    | `SEQ_PRICES` | `127.0.0.1:8088` | `/prices` (market-data feed) |
    | `SEQ_DEX` | `127.0.0.1:9945` | `/dex` (SeqDEX daemon) |
    | `SEQ_SEQOB` | `127.0.0.1:9955` | `/seqob` (SeqOB order-book relay, HTTP + WebSocket) |
+   | `SEQ_SEQOB_PLN` | `127.0.0.1:9965` | `/seqob-pln` (submarine + pure-Lightning relay, HTTP + WebSocket) |
+   | `SEQ_SEQOB_SUBAS` | `127.0.0.1:9971` | `/seqob-subas` (sub-asset SELL relay, HTTP + WebSocket) |
+   | `SEQ_SEQOB_SUBASBUY` | `127.0.0.1:9966` | `/seqob-subasbuy` (sub-asset BUY relay, HTTP + WebSocket) |
    | `SEQ_BRIDGE` | `127.0.0.1:9950` | `/bridge` (Compages bridge UI + API) |
    | `PORT` | `8080` | listen port |
    | `DOWNLOAD_DIR` | `./downloads` | `/download` static mount |
    | `WALLET_DIR` | `./wallet` | `/wallet` static mount (built SWK web wallet) |
 
    The proxied services are optional: if one is not running, only its path
-   returns errors.
+   returns errors. Every SeqOB relay needs its own mount: an offer is only
+   liftable against the relay holding it, so a relay without a mount shows
+   up in the merged book and fails to lift.
 3. **Node-backed helpers**: `serve-public.js` also shells out to a local
-   `elements-cli` for the testnet faucet (`POST /faucet`), fee-asset exchange
+   `sequentia-cli` for the testnet faucet (`POST /faucet`), fee-asset exchange
    rates (`GET /feerates`), anchor reads (`GET /anchor/:hash`,
    `GET /anchorstatus`), and a `POST /api/tx` broadcast override that forwards
    raw transactions to the block producers (the committee mesh does not relay
    externally submitted transactions). These are configured by `FAUCET_CLI`,
-   `FAUCET_DATADIR`, `FAUCET_WALLET`, `FAUCET_AMOUNT`, `PRODUCER_DATADIR(S)`,
-   `BROADCAST_DATADIR`, `FEERATES_CLI`/`FEERATES_DATADIR`, and
+   `FAUCET_DATADIR`, `FAUCET_WALLET`, `FAUCET_AMOUNT`, `FAUCET_COOLDOWN_MS`
+   (per-address and per-IP cooldown, default one hour), `PRODUCER_DATADIR(S)`,
+   `BROADCAST_DATADIR`, `BACKSTOP_MAX_ATTEMPTS` (how often the backstop
+   re-forwards one transaction before giving up, default 30),
+   `FEERATES_CLI`/`FEERATES_DATADIRS` (comma-separated; default = the producer
+   and broadcast datadirs, which must stay the broadcast targets), and
    `ANCHOR_CLI`/`ANCHOR_DATADIR`; the defaults are the production box's node
    paths. Without a local node these endpoints fail cleanly and the static
    site + API proxies still work.
@@ -64,8 +73,10 @@ persistent location such as `/srv/downloads`.
 ## systemd user services (`deploy/systemd/*.service`)
 
 Three reference units, written for a deployment where this repo is cloned at
-`~/sequentia-explorer` and `sequentia-electrs` at `~/sequentia-electrs`
-(adjust the absolute paths in the units if your layout differs):
+`~/sequentia-explorer` and `sequentia-electrs` at `~/sequentia-electrs`. The
+units spell that as `%h/...` (systemd expands `%h` to the unit user's home);
+adjust the paths, including the `node` binary in `concatena-explorer.service`,
+if your layout differs:
 
 - `concatena-electrs-seq.service`: the Sequentia electrs under its
   crash-wiping supervisor (`run-electrs-supervised.sh`), with a persistent

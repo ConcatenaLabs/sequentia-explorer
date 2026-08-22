@@ -34,16 +34,12 @@ which covers `intersectAtMinimum` in `feerates.js` and nothing else. There is no
 `deploy/systemd/` holds the three units (the server plus the two electrs instances) and
 `deploy/README.md` documents the environment variables and install steps.
 
-## The faucet is off on purpose
+## The faucet
 
-`POST /faucet` returns 503 unconditionally: the handler opens with a `return` and the entire
-original faucet body below it is deliberately unreachable, with `GET /faucet` carrying a banner
-saying so. It was switched off at the owner's instruction after an automated watchdog destroyed
-the treasury wallet's HD seed, leaving the funds behind it permanently unspendable. The reason
-is recorded in the code comment above the handler.
-
-Do not re-enable it, do not delete the unreachable code, and do not "repair" it as a drive-by
-cleanup.
+The faucet was off from 2026-07-29 to 2026-08-12: an automated watchdog destroyed the treasury
+wallet, and the funds behind it were recreated by the node's height-89500 recovery fork. It is
+live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (default
+`treasury2026`) through `sequentia-cli`; the history is in the comment above the handler.
 
 ## Things that break if you get them wrong
 
@@ -73,7 +69,7 @@ cleanup.
   [`sequentia-registry`](https://github.com/GracedEternalKingCabbageMan/sequentia-registry);
   `/prices`, `/dex`, `/seqob*` and `/bridge` proxy to their own services.
 - The server never speaks JSON-RPC itself. Where it needs the node (broadcast override, fee
-  rates, anchor reads, and previously the faucet) it shells out to `elements-cli -datadir=...`
+  rates, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
   and inherits the node's cookie auth. That is why no RPC credentials appear anywhere in this
   repo — keep it that way.
 

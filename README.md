@@ -26,7 +26,7 @@ lives in a separate repo:
 |---|---|
 | [`sequentia-explorer`](https://github.com/GracedEternalKingCabbageMan/sequentia-explorer) | (this repo) Sequentia block explorer frontend (esplora fork); the indexer lives in sequentia-electrs. |
 | [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs) | The electrs fork: Rust indexer + Esplora REST API for Sequentia and its Bitcoin testnet4 parent chain. |
-| [`Sequentia`](https://github.com/GracedEternalKingCabbageMan/Sequentia) | The Sequentia node (`elementsd` fork of Elements 23.3.3): consensus, anchoring, proof of stake, open fee market, plus the canonical protocol documentation in `doc/sequentia/`. |
+| [`Sequentia`](https://github.com/GracedEternalKingCabbageMan/Sequentia) | The Sequentia node (`sequentiad`, a fork of Elements 23.3.3): consensus, anchoring, proof of stake, open fee market, plus the canonical protocol documentation in `doc/sequentia/`. |
 | [`sequentia-registry`](https://github.com/GracedEternalKingCabbageMan/sequentia-registry) | Sequentia Asset Registry service (asset metadata). |
 
 The frontend talks to the indexer only over the Esplora REST API (same-origin
@@ -46,10 +46,13 @@ details, mempool), plus Sequentia-specific views:
   block down to its Bitcoin anchor in one click
   (`esplora/client/src/views/block.js`).
 - **Proof-of-stake committee certificate.** When a block's proof solution
-  carries a decodable BLS committee certificate, the block's advanced view
-  renders it: leader signature, BLS aggregate signature, and each signing
-  member's keys. A "Finality" row shows checkpoint finality when the API
-  supplies it.
+  carries a decodable BLS committee certificate, the block page shows how
+  many committee members signed it (`pos_certificate.signer_count`; the
+  certificate also carries `leader_sig`, `agg_sig` and, on the current
+  chain, the `signer_bitfield`). A "Finality" row is wired to the optional
+  `finalized` block field, but the current indexer never populates that
+  field, so the row does not render; finality is served separately by
+  `GET /api/sequentia/checkpoints`.
 - **Issued assets.** The Assets tab lists issued assets; asset pages show
   issuance, supply, and transactions. Asset names, tickers, and display
   precision come from the Sequentia Asset Registry (`ASSET_MAP_URL`, served
@@ -115,18 +118,20 @@ node serve-public.js          # everything on one port, default :8080
 `/explorer/` (Sequentia) and `/testnet4/` (Bitcoin testnet4). `serve-public.js`
 serves the static build plus, on the same origin:
 
-- a landing page at `/` linking the explorer, wallet, bridge, rewards, and
-  downloads
+- a landing page at `/` linking every public service on the domain: the
+  explorer, web wallet, staking pool board, SeqDEX, faucet, Emissio rewards,
+  Compages bridge, Pignus lending, Levo launchpad, SeqPal, and downloads
 - API proxies: `/api` -> Sequentia electrs (`SEQ_ELECTRS`, default
   `127.0.0.1:3003`), `/testnet4/api` -> testnet4 electrs (`T4_ELECTRS`,
   default `127.0.0.1:3004`)
 - proxies for the other Sequentia services when they run on the same host:
   `/registry` (asset registry), `/prices` (market-data feed), `/dex` (SeqDEX
-  daemon), `/seqob` (SeqOB order-book relay, including its WebSocket),
+  daemon), `/seqob`, `/seqob-pln`, `/seqob-subas` and `/seqob-subasbuy` (one
+  mount per SeqOB order-book relay, WebSocket included; see `SEQOB_RELAYS`),
   `/bridge` (Compages bridge)
 - static mounts: `/download` (release artifacts, `DOWNLOAD_DIR`) and `/wallet`
   (the built SWK web wallet, `WALLET_DIR`)
-- node-backed helpers that shell out to `elements-cli` on the host (testnet
+- node-backed helpers that shell out to `sequentia-cli` on the host (testnet
   faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, anchor
   reads at `GET /anchor/:hash` and `GET /anchorstatus`, and a `POST /api/tx`
   broadcast override that forwards raw transactions to a block producer). These
@@ -140,8 +145,9 @@ See `deploy/README.md` for the systemd units and public exposure.
 The REST API is the Esplora HTTP API served by
 [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs).
 `esplora/API.md` documents it, including the Sequentia-specific block fields
-(`bitcoin_anchor`, `pos_certificate`, `finalized`), the Elements asset
-endpoints, and `GET /api/sequentia/anchorstatus`. Quick check:
+(`bitcoin_anchor`, `pos_certificate`; `finalized` is declared but never
+populated), the Elements asset endpoints, `GET /api/sequentia/checkpoints`
+and `GET /api/sequentia/anchorstatus`. Quick check:
 
 ```sh
 curl -s https://sequentiatestnet.com/api/blocks/tip/height
@@ -168,7 +174,8 @@ The fork keeps upstream's structure; the Sequentia work is concentrated in:
 - `esplora/flavors/bitcoin-testnet4/` - parent-chain flavor used by the
   second explorer.
 - `esplora/client/src/views/block.js` - Bitcoin anchor row, PoS committee
-  certificate rendering, checkpoint-finality row.
+  signer count, checkpoint-finality row (renders only if the API ever sets
+  `finalized`).
 - `esplora/client/src/views/tx.js`, `transactions.js`, `mempool.js` -
   per-asset values, any-asset fees, fee rates in the fee asset's own units
   per vByte.

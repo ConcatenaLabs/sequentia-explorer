@@ -24,16 +24,16 @@ lives in a separate repo:
 
 | Repo | One-liner |
 |---|---|
-| [`sequentia-explorer`](https://github.com/GracedEternalKingCabbageMan/sequentia-explorer) | (this repo) Sequentia block explorer frontend (esplora fork); the indexer lives in sequentia-electrs. |
-| [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs) | The electrs fork: Rust indexer + Esplora REST API for Sequentia and its Bitcoin testnet4 parent chain. |
-| [`Sequentia`](https://github.com/GracedEternalKingCabbageMan/Sequentia) | The Sequentia node (`sequentiad`, a fork of Elements 23.3.3): consensus, anchoring, proof of stake, open fee market, plus the canonical protocol documentation in `doc/sequentia/`. |
-| [`sequentia-registry`](https://github.com/GracedEternalKingCabbageMan/sequentia-registry) | Sequentia Asset Registry service (asset metadata). |
+| [`sequentia-explorer`](https://github.com/ConcatenaLabs/sequentia-explorer) | (this repo) Sequentia block explorer frontend (esplora fork); the indexer lives in sequentia-electrs. |
+| [`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs) | The electrs fork: Rust indexer + Esplora REST API for Sequentia and its Bitcoin testnet4 parent chain. |
+| [`Sequentia`](https://github.com/ConcatenaLabs/Sequentia) | The Sequentia node (`sequentiad`, a fork of Elements 23.3.3): consensus, anchoring, proof of stake, open fee market, plus the canonical protocol documentation in `doc/sequentia/`. |
+| [`sequentia-registry`](https://github.com/ConcatenaLabs/sequentia-registry) | Sequentia Asset Registry service (asset metadata). |
 
 The frontend talks to the indexer only over the Esplora REST API (same-origin
 `/api`, proxied to electrs), so there is no build-time coupling between the two
 repos. When the indexer's REST surface changes, update the frontend here to
 match. Protocol-level documentation (anchoring, proof of stake, fees) lives in
-[`Sequentia/doc/sequentia/`](https://github.com/GracedEternalKingCabbageMan/Sequentia/tree/HEAD/doc/sequentia).
+[`Sequentia/doc/sequentia/`](https://github.com/ConcatenaLabs/Sequentia/tree/HEAD/doc/sequentia).
 
 ## What the explorer shows
 
@@ -92,7 +92,7 @@ only reachable same-origin on the public server); everything else works.
 ### Against a local electrs
 
 Run a Sequentia electrs (see
-[`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs))
+[`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs))
 with its REST API on `:3003` (and optionally a Bitcoin testnet4 electrs on
 `:3004`), then:
 
@@ -143,7 +143,7 @@ See `deploy/README.md` for the systemd units and public exposure.
 ## API for integrators
 
 The REST API is the Esplora HTTP API served by
-[`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs).
+[`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs).
 `esplora/API.md` documents it, including the Sequentia-specific block fields
 (`bitcoin_anchor`, `pos_certificate`; `finalized` is declared but never
 populated), the Elements asset endpoints, `GET /api/sequentia/checkpoints`

@@ -9,9 +9,9 @@ The public front door of the Sequentia testnet site. Two things live here:
   reverse proxies to the indexers, registry, price feed, DEX and order-book relays.
 
 The indexer itself is **not** here; it was split out to
-[`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs).
+[`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs).
 Node and consensus conventions live in the
-[`Sequentia`](https://github.com/GracedEternalKingCabbageMan/Sequentia) repo.
+[`Sequentia`](https://github.com/ConcatenaLabs/Sequentia) repo.
 
 ## Build and run
 
@@ -63,10 +63,10 @@ live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (
 
 - `/wallet` is an `express.static` mount of `WALLET_DIR` (default `./wallet`). There is no
   submodule and no build-time coupling to
-  [`sequentia-web-wallet`](https://github.com/GracedEternalKingCabbageMan/sequentia-web-wallet);
+  [`sequentia-web-wallet`](https://github.com/ConcatenaLabs/sequentia-web-wallet);
   the built wallet is simply placed in that directory.
 - `/api` and `/testnet4/api` proxy to the two electrs instances; `/registry` proxies to
-  [`sequentia-registry`](https://github.com/GracedEternalKingCabbageMan/sequentia-registry);
+  [`sequentia-registry`](https://github.com/ConcatenaLabs/sequentia-registry);
   `/prices`, `/dex`, `/seqob*` and `/bridge` proxy to their own services.
 - The server never speaks JSON-RPC itself. Where it needs the node (broadcast override, fee
   rates, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`

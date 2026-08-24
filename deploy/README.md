@@ -55,7 +55,7 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    paths. Without a local node these endpoints fail cleanly and the static
    site + API proxies still work.
 4. **Backends**: the two electrs indexers live in the separate
-   [`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs)
+   [`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs)
    repo: `run-electrs-supervised.sh` (Sequentia, REST on `:3003`) and
    `run-electrs-testnet4.sh` (Bitcoin testnet4, REST on `:3004`). The frontend
    talks to them only over HTTP, so there is no build-time dependency between

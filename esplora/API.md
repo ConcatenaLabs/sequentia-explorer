@@ -19,7 +19,7 @@ You can also [self-host the Esplora API server](https://github.com/Blockstream/e
 ## Sequentia
 
 The Sequentia testnet API is this same Esplora HTTP API, served by the
-[`sequentia-electrs`](https://github.com/GracedEternalKingCabbageMan/sequentia-electrs)
+[`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs)
 indexer. Public base URLs:
 
 - Sequentia testnet: `https://sequentiatestnet.com/api`
@@ -38,7 +38,7 @@ Sequentia is an Elements-based multi-asset chain, so the
 [Assets endpoints](#assets-elementsliquid-only) below are active. Where the
 upstream documentation says "satoshis", read "base units of the asset in
 question"; an asset's display precision is metadata from the
-[Sequentia Asset Registry](https://github.com/GracedEternalKingCabbageMan/sequentia-registry)
+[Sequentia Asset Registry](https://github.com/ConcatenaLabs/sequentia-registry)
 and does not change the API's units. Sequentia has an open fee market: a
 transaction fee can be paid in any asset the block producers accept, so a fee
 value is denominated in the paying asset's base units, not necessarily tSEQ.

@@ -43,24 +43,11 @@ const DOWNLOAD_DIR = process.env.DOWNLOAD_DIR || path.join(__dirname, 'downloads
 // pkg/). Defaults to ./wallet next to this file.
 const WALLET_DIR = process.env.WALLET_DIR || path.join(__dirname, 'wallet')
 
-// Testnet faucet: POST /faucet {address} sends FAUCET_AMOUNT tSEQ from a funded
-// node wallet to the address. Propagation to the block producers is handled at
-// the node level (not here). Rate-limited per address + per IP.
+// The Sequentia CLI, used for tx broadcast forwarding, fee-rate reads, anchor
+// status and the mempool sweep below.
 const { execFile } = require('child_process')
-const FAUCET_CLI = process.env.FAUCET_CLI || '/root/Sequentia/src/sequentia-cli'
-const FAUCET_DATADIR = process.env.FAUCET_DATADIR || '/root/seq-testnet/node-gw'
-const FAUCET_WALLET = process.env.FAUCET_WALLET || 'treasury2026'
-const FAUCET_AMOUNT = process.env.FAUCET_AMOUNT || '50000'
-const FAUCET_COOLDOWN_MS = Number(process.env.FAUCET_COOLDOWN_MS || 3600000)
-const FAUCET_ADDR_RE = /^(tb1|tsqb1)[ac-hj-np-z02-9]{20,180}$/   // bech32/blech32 data charset
-const faucetSeen = new Map()                                    // key -> last-served epoch ms
-const faucetTooSoon = k => { const t = faucetSeen.get(k); return t && (Date.now() - t) < FAUCET_COOLDOWN_MS }
-// Evict faucetSeen entries older than the cooldown so the map can't grow
-// unbounded (one key per address/IP per asset would otherwise accumulate forever).
-setInterval(() => {
-  const cutoff = Date.now() - FAUCET_COOLDOWN_MS
-  for (const [k, t] of faucetSeen) if (t < cutoff) faucetSeen.delete(k)
-}, FAUCET_COOLDOWN_MS).unref()
+const SEQ_CLI = process.env.SEQ_CLI || '/root/Sequentia/src/sequentia-cli'
+
 // Broadcast forwarding (see below): the PoS committee mesh doesn't relay externally-
 // submitted txs to producers, so we push raw Sequentia txs straight to a producer.
 // One or more producers to forward to (comma-separated datadirs). The first is
@@ -110,12 +97,12 @@ app.use('/testnet4/api', proxyTo(T4_ELECTRS))
 app.post('/api/tx', express.text({ type: () => true, limit: '500kb' }), (req, res) => {
   const rawhex = String(req.body || '').trim()
   if (!TXHEX_RE.test(rawhex)) return res.status(400).type('text').send('invalid transaction hex')
-  const send = (dd, cb) => execFile(FAUCET_CLI, ['-datadir=' + dd, 'sendrawtransaction', rawhex], { timeout: 25000 }, cb)
+  const send = (dd, cb) => execFile(SEQ_CLI, ['-datadir=' + dd, 'sendrawtransaction', rawhex], { timeout: 25000 }, cb)
   // Recover the txid of the submitted hex without relying on stdout (the
   // "already in block chain" branch returns an empty stdout) and without parsing
   // the error string (it has none). The explorer node already has the tx, so
   // decoderawtransaction of the submitted hex yields the canonical txid.
-  const recoverTxid = cb => execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'decoderawtransaction', rawhex],
+  const recoverTxid = cb => execFile(SEQ_CLI, ['-datadir=' + BROADCAST_DATADIR, 'decoderawtransaction', rawhex],
     { timeout: 10000 }, (e, so) => {
       if (e) return cb(null)
       let d; try { d = JSON.parse(so) } catch { return cb(null) }
@@ -192,41 +179,12 @@ app.use('/wallet', express.static(WALLET_DIR, {
   setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache'),
 }))
 
-// Testnet faucet. execFile (no shell) + a strict address regex means the user-supplied
-// address can't inject anything; it's only ever an argv element. The optional `asset` is
-// validated against a fixed allowlist (label -> amount), so it's injection-safe too.
-const FAUCET_ASSETS = { USDX: '10', EURX: '10', GOLD: '10', SILVR: '10', OILX: '10' }
-// The faucet was OFF from 2026-07-29 (a watchdog rm -rf'd the treasury wallet on a
-// single failed health check, orphaning ~398M tSEQ and the reissuance tokens) until
-// 2026-08-12, when the treasury-recovery hard fork at height 89500 recreated the
-// funds and the assets were reissued into the replacement wallet (treasury2026).
-app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
-  const address = String((req.body && req.body.address) || '').trim()
-  if (!FAUCET_ADDR_RE.test(address)) return res.status(400).json({ error: 'Enter a valid Sequentia address.' })
-  const asset = String((req.body && req.body.asset) || '').trim()   // '' = native tSEQ
-  if (asset && !Object.prototype.hasOwnProperty.call(FAUCET_ASSETS, asset))
-    return res.status(400).json({ error: 'Unknown faucet asset.' })
-  const unit = asset || 'tSEQ'
-  const amount = asset ? FAUCET_ASSETS[asset] : FAUCET_AMOUNT
-  // req.ip is the trusted client IP (trust proxy=1 above): the single hop's
-  // X-Forwarded-For, falling back to the socket address — not user-spoofable.
-  const ip = String(req.ip || req.socket.remoteAddress || '').trim()
-  if (faucetTooSoon('a:' + unit + ':' + address) || faucetTooSoon('i:' + unit + ':' + ip))
-    return res.status(429).json({ error: 'Already funded recently; please wait before requesting again.' })
-  // The open fee market means no asset is the default fee asset; the node requires the
-  // fee asset to be NAMED. Pay it in the asset being sent (the fee-model default for
-  // asset transfers), and in tSEQ ("bitcoin" is the node's label for the policy asset)
-  // for plain tSEQ requests. The faucet wallet holds a balance of every faucet asset.
-  const args = ['-datadir=' + FAUCET_DATADIR, '-rpcwallet=' + FAUCET_WALLET, '-named', 'sendtoaddress',
-    'address=' + address, 'amount=' + amount, 'fee_rate=2', 'fee_asset_label=' + (asset || 'bitcoin')]
-  if (asset) args.push('assetlabel=' + asset)
-  execFile(FAUCET_CLI, args, { timeout: 30000 },
-    (err, stdout, stderr) => {
-      if (err) return res.status(502).json({ error: String(stderr || err.message).trim().split('\n').pop() || 'faucet send failed' })
-      faucetSeen.set('a:' + unit + ':' + address, Date.now()); faucetSeen.set('i:' + unit + ':' + ip, Date.now())
-      res.json({ txid: stdout.trim(), amount, asset: unit })
-    })
-})
+// Testnet faucet: same-origin /faucet -> :9960, served by the sequentia-faucet
+// repo. The mount strips /faucet, so the service sees GET / for its page and
+// POST / for a send, while callers keep the unchanged GET /faucet and
+// POST /faucet. It used to live in this file; a faucet is not an explorer.
+const SEQ_FAUCET = process.env.SEQ_FAUCET || '127.0.0.1:9960'
+app.use('/faucet', proxyTo(SEQ_FAUCET))
 
 // Fee-asset exchange rates (Sequentia any-asset-fees): GET /feerates returns the
 // node's EFFECTIVE acceptance set {("bitcoin"|assetHex): rate} via getfeeexchangerates
@@ -234,7 +192,7 @@ app.post('/faucet', express.json({ limit: '4kb' }), (req, res) => {
 // now (stale dynamic entries are already dropped). The wallet uses these to let users
 // pay a Sequentia tx fee in a non-policy asset. No user input → no injection surface;
 // short-cached since rates move ~per block.
-const FEERATES_CLI = process.env.FEERATES_CLI || FAUCET_CLI
+const FEERATES_CLI = process.env.FEERATES_CLI || SEQ_CLI
 // THE NODES WE ACTUALLY BROADCAST TO. /feerates used to read ONE node (the
 // explorer's), while POST /api/tx submits to the producer AND the explorer. Two
 // daemons, two independent rate tables, coupled only by the price-server sidecar
@@ -312,7 +270,7 @@ app.get('/feerates', (req, res) => {
 // block's anchor height before revealing its secret (the esplora REST API does
 // not surface the custom anchor_height header field). Read-only node RPC. The
 // block hash is strictly validated so it can only ever be one argv element.
-const ANCHOR_CLI = process.env.ANCHOR_CLI || FAUCET_CLI
+const ANCHOR_CLI = process.env.ANCHOR_CLI || SEQ_CLI
 const ANCHOR_DATADIR = process.env.ANCHOR_DATADIR || BROADCAST_DATADIR
 app.get('/anchor/:hash', (req, res) => {
   const h = String(req.params.hash || '')
@@ -388,137 +346,10 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
   </footer>
 </div></body></html>`;
 
-// Standalone faucet page served at GET /faucet (POST /faucet, above, is the send
-// backend). This gives the existing faucet a public page of its own so it can be
-// used from wallets without a built-in faucet button (the full node, etc.): the
-// user pastes any Sequentia testnet address and requests tSEQ / USDX / EURX / GOLD
-// / SILVR / OILX. Pure same-origin frontend for the POST /faucet backend — no new
-// service. Source of truth: doc/sequentia/faucet-page/index.html in the node repo.
-const FAUCET_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sequentia testnet faucet</title>
-<link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
-<style>
-  :root{color-scheme:dark}
-  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1216;color:#e8eaed;display:flex;min-height:100vh;align-items:center;justify-content:center}
-  .wrap{max-width:720px;padding:48px 24px;width:100%}
-  .brand{display:flex;align-items:center;gap:14px;margin:0 0 8px}
-  .brand img{height:52px;width:52px}
-  h1{font-size:30px;margin:0} h1 .t{color:#f5b301}
-  .sub{color:#9aa0a6;margin:0 0 28px}
-  .panel{background:#171b21;border:1px solid #262b33;border-radius:12px;padding:22px}
-  label{display:block;font-size:13px;color:#9aa0a6;margin:0 0 6px}
-  input[type=text]{width:100%;box-sizing:border-box;background:#0f1216;border:1px solid #262b33;border-radius:8px;color:#e8eaed;font:14px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;padding:11px 12px;outline:none}
-  input[type=text]:focus{border-color:#f5b301}
-  .hint{font-size:12.5px;color:#6b7280;margin:8px 0 0}
-  .hint code{color:#9aa0a6;font-size:12px}
-  .assets{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
-  .assets button{background:#0f1216;border:1px solid #262b33;border-radius:8px;color:#e8eaed;font-size:14px;padding:9px 16px;cursor:pointer;transition:border-color .15s,transform .05s}
-  .assets button:hover:not(:disabled){border-color:#f5b301;transform:translateY(-1px)}
-  .assets button:disabled{opacity:.45;cursor:default}
-  .assets button.all{border-color:#f5b301;color:#f5b301;font-weight:600}
-  .assets button b{color:#f5b301;font-weight:600} .assets button.all b{color:inherit}
-  .assets button small{color:#6b7280;font-size:11.5px;display:block;line-height:1.2}
-  #log{margin-top:18px;display:grid;gap:8px}
-  .msg{font-size:14px;border-radius:8px;padding:10px 12px;border:1px solid #262b33;background:#0f1216;overflow-wrap:anywhere}
-  .msg.ok{border-color:#1d4429;color:#7ee2a0}
-  .msg.err{border-color:#5a2626;color:#f0a1a1}
-  .msg.busy{color:#9aa0a6}
-  .msg a{color:#f5b301;text-decoration:none} .msg a:hover{text-decoration:underline}
-  .spin{display:inline-block;width:12px;height:12px;border:2px solid #6b7280;border-top-color:#f5b301;border-radius:50%;margin-right:8px;vertical-align:-1px;animation:r .8s linear infinite}
-  @keyframes r{to{transform:rotate(360deg)}}
-  footer{margin-top:32px;border-top:1px solid #262b33;padding-top:20px;color:#6b7280;font-size:13px}
-  footer a{color:#f5b301;text-decoration:none} footer a:hover{text-decoration:underline}
-</style></head><body><div class="wrap">
-  <div class="brand">
-    <a href="/"><img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia"></a>
-    <h1>Sequentia <span class="t">faucet</span></h1>
-  </div>
-  <p class="sub">Free testnet coins, sent straight to any Sequentia testnet address &mdash; your full node, desktop wallet, mobile wallet or web wallet.</p>
-
-  <div class="panel">
-    <label for="addr">Your Sequentia testnet address</label>
-    <input type="text" id="addr" placeholder="tb1q&hellip;" spellcheck="false" autocomplete="off">
-    <p class="hint">In the desktop wallet: <b>Receive &rarr; Create new address</b>. From a node: <code>sequentia-cli getnewaddress</code>. In the <a href="/wallet/" style="color:#f5b301;text-decoration:none">web wallet</a>: the receive address on the main screen.</p>
-
-    <div class="assets" id="assets">
-      <button data-asset=""><b>tSEQ</b><small>Sequence token</small></button>
-      <button data-asset="USDX"><b>USDX</b><small>test dollar</small></button>
-      <button data-asset="EURX"><b>EURX</b><small>test euro</small></button>
-      <button data-asset="GOLD"><b>GOLD</b><small>test gold</small></button>
-      <button data-asset="SILVR"><b>SILVR</b><small>test silver</small></button>
-      <button data-asset="OILX"><b>OILX</b><small>test oil</small></button>
-      <button class="all" id="allBtn"><b>All of them</b><small>one of each</small></button>
-    </div>
-
-    <div id="log"></div>
-  </div>
-
-  <footer>
-    Testnet only; assets carry no value. &middot; <a href="/">sequentiatestnet.com</a>
-  </footer>
-</div>
-<script>
-const $=id=>document.getElementById(id);
-const addrInput=$('addr');
-addrInput.value=localStorage.getItem('faucetAddr')||'';
-addrInput.addEventListener('input',()=>localStorage.setItem('faucetAddr',addrInput.value.trim()));
-
-function msg(cls,html){const d=document.createElement('div');d.className='msg '+cls;d.innerHTML=html;$('log').prepend(d);return d;}
-function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-
-function checkAddr(){
-  const a=addrInput.value.trim();
-  if(!a){msg('err','Enter an address first.');addrInput.focus();return null;}
-  if(!/^[a-zA-Z0-9]{14,120}$/.test(a)){msg('err','That doesn’t look like a valid address.');return null;}
-  return a;
-}
-
-async function requestOne(asset,addr){
-  const label=asset||'tSEQ';
-  const busy=msg('busy','<span class="spin"></span>Requesting '+esc(label)+'…');
-  try{
-    const body=asset?{address:addr,asset}:{address:addr};
-    const r=await fetch('/faucet',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    let j; try{j=await r.json();}catch(e){j={};}
-    if(!r.ok) throw new Error(j.error||('HTTP '+r.status));
-    busy.className='msg ok';
-    busy.innerHTML='Sent '+esc(Number(j.amount).toLocaleString('en-US'))+' '+esc(j.asset)+
-      ' &mdash; <a href="/explorer/tx/'+esc(j.txid)+'" target="_blank" rel="noopener">'+esc(String(j.txid).slice(0,16))+'&hellip;</a>'+
-      ' It will appear once it confirms (about a minute).';
-  }catch(e){
-    busy.className='msg err';
-    busy.textContent=label+': '+(e&&e.message?e.message:e);
-  }
-}
-
-let running=false;
-async function withButtons(fn){
-  if(running)return; running=true;
-  const btns=[...document.querySelectorAll('.assets button')];
-  btns.forEach(b=>b.disabled=true);
-  try{await fn();}finally{btns.forEach(b=>b.disabled=false);running=false;}
-}
-
-document.querySelectorAll('#assets button[data-asset]').forEach(b=>{
-  b.addEventListener('click',()=>{const a=checkAddr();if(a)withButtons(()=>requestOne(b.dataset.asset,a));});
-});
-$('allBtn').addEventListener('click',()=>{
-  const a=checkAddr(); if(!a)return;
-  withButtons(async()=>{
-    for(const b of document.querySelectorAll('#assets button[data-asset]')){
-      await requestOne(b.dataset.asset,a);
-    }
-  });
-});
-</script>
-</body></html>`;
 
 // Greeting page at the site root.
 app.get('/', (req, res) => res.type('html').send(LANDING_HTML))
 
-// Standalone faucet page (GET). POST /faucet, defined above, is the send backend.
-app.get(['/faucet', '/faucet/'], (req, res) => res.type('html').send(FAUCET_HTML))
 
 // Static assets (serves dist/explorer/**, dist/testnet4/**). express.static itself redirects the
 // bare /explorer -> /explorer/ and serves dist/explorer/index.html for /explorer/.
@@ -533,7 +364,7 @@ app.get('*', (req, res) => res.redirect('/')) // unknown path -> greeting
 // a producer, so nothing sits unmined even if it arrived before this server started or via
 // a path other than POST /api/tx. txids come from the node's own mempool, never from users.
 setInterval(() => {
-  execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawmempool', 'true'], { timeout: 15000 }, (err, stdout) => {
+  execFile(SEQ_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawmempool', 'true'], { timeout: 15000 }, (err, stdout) => {
     if (err) return
     let m; try { m = JSON.parse(stdout) } catch { return }
     const live = new Set(Object.keys(m))
@@ -550,11 +381,11 @@ setInterval(() => {
         continue
       }
       backstopAttempts.set(txid, attempts + 1)
-      execFile(FAUCET_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawtransaction', txid], { timeout: 15000 }, (e, hex) => {
+      execFile(SEQ_CLI, ['-datadir=' + BROADCAST_DATADIR, 'getrawtransaction', txid], { timeout: 15000 }, (e, hex) => {
         if (e || !hex) return
         const raw = String(hex).trim()
         for (const dd of PRODUCER_DATADIRS)                             // forward to every configured producer
-          execFile(FAUCET_CLI, ['-datadir=' + dd, 'sendrawtransaction', raw], { timeout: 20000 }, () => {})
+          execFile(SEQ_CLI, ['-datadir=' + dd, 'sendrawtransaction', raw], { timeout: 20000 }, () => {})
       })
     }
   })
@@ -594,4 +425,4 @@ server.on('upgrade', (req, socket, head) => {
 })
 
 server.listen(PORT, () =>
-  console.log(`explorer (static+proxy) on :${PORT}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /dex->${SEQ_DEX}  /seqob->${SEQ_SEQOB} (+ws)  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${FAUCET_AMOUNT} tSEQ from ${FAUCET_WALLET}`))
+  console.log(`explorer (static+proxy) on :${PORT}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /dex->${SEQ_DEX}  /seqob->${SEQ_SEQOB} (+ws)  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${SEQ_FAUCET}`))

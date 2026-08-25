@@ -13,8 +13,8 @@ page at https://sequentiatestnet.com/. The REST API is at
 https://sequentiatestnet.com/api (Sequentia) and
 https://sequentiatestnet.com/testnet4/api (Bitcoin testnet4).
 
-Sequentia is a Bitcoin sidechain for asset tokenization and decentralized
-exchange, built as a fork of Blockstream Elements. **Everything here is testnet
+Sequentia is a Bitcoin sidechain for asset tokenization and disintermediated
+exchanges, built as a fork of Blockstream Elements. **Everything here is testnet
 software; testnet assets carry no value.**
 
 ## Frontend vs indexer

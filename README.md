@@ -160,6 +160,8 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
   in `esplora/flavors/sequentia-testnet/` and `esplora/flavors/bitcoin-testnet4/`.
 - `build-public.sh` - builds both static flavors into `esplora/dist/`.
 - `serve-public.js` - the production static+proxy server (Express 4).
+- `feerates.js` - the fee-asset exchange-rate helper behind `GET /feerates`,
+  with its own suite in `feerates.test.mjs`.
 - `run-sequentia-explorer.sh`, `run-testnet4-explorer.sh` - local dev servers.
 - `downloads/` - the `/download` landing page (committed; built artifacts are
   dropped in at deploy time and are not committed).
@@ -194,9 +196,10 @@ system, configuration options, upstream Docker deployment) and
 
 ## Contributing
 
-Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed;
-there is no test suite in this repo beyond building and clicking through the
-affected views against a running API.
+Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
+The server-side fee-rate helper is covered by `node --test feerates.test.mjs`;
+the explorer views themselves have no automated coverage, so check them by
+clicking through the affected pages against a running API.
 
 ## License
 

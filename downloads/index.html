@@ -213,8 +213,9 @@
       </div>
       <p class="pdesc">Collateralised lending from the command line, against your own node.
         Everything <a href="/lending/">the lending site</a> does &mdash; propose a loan, publish a
-        funded offer, borrow, repay, liquidate &mdash; plus the one check the whole thing rests on:
-        rebuild a vault&rsquo;s address from the terms you agreed and refuse to sign if it differs.</p>
+        funded offer, borrow, repay, liquidate, lend against native Bitcoin &mdash; plus the one
+        check the whole thing rests on: rebuild a vault&rsquo;s address from the terms you agreed
+        and refuse to sign if it differs.</p>
       <div class="grid">
         <div class="card">
           <div class="os">Linux · macOS · anywhere with Python 3</div>
@@ -240,8 +241,8 @@
       <p class="note">Pure Python, no build step. It needs a Sequentia <b>source</b> checkout, because
         the loan covenant lives in the node repository and Pignus imports the proven builder rather
         than carrying a copy of it: set <code>SEQUENTIA_SRC</code> and run
-        <code>tests/cli_drill.sh</code> to check the wiring. sha256
-        <code>dd8b849881c8b8d7c983b666bdd269fde3d04b6557d73dfb62688766189e22cc</code></p>
+        <code>tests/cli_drill.sh</code> to check the wiring. Verify the download against
+        <a href="SHA256SUMS">SHA256SUMS</a>, like every other file here.</p>
     </section>
 
     <!-- ──────────────────────  Ambra for Chromium  ──────────────────────── -->

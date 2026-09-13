@@ -118,9 +118,12 @@ node serve-public.js          # everything on one port, default :8080
 `/explorer/` (Sequentia) and `/testnet4/` (Bitcoin testnet4). `serve-public.js`
 serves the static build plus, on the same origin:
 
-- a landing page at `/` linking every public service on the domain: the
-  explorer, web wallet, staking pool board, SeqDEX, faucet, Emissio rewards,
-  Compages bridge, Pignus lending, Levo launchpad, SeqPal, and downloads
+- the front page at `/`, linking the explorer, the faucet, the Compages
+  bridge, Emissio rewards and the Sequentia Core download page
+  (`/download/core/`); and the full menu at `/secretfullmenu`, linked from
+  nowhere, listing every public service on the domain: the explorer, web
+  wallet, staking pool board, SeqDEX, faucet, Emissio rewards, Compages
+  bridge, Pignus lending, Levo launchpad, SeqPal, and the full downloads page
 - API proxies: `/api` -> Sequentia electrs (`SEQ_ELECTRS`, default
   `127.0.0.1:3003`), `/testnet4/api` -> testnet4 electrs (`T4_ELECTRS`,
   default `127.0.0.1:3004`)
@@ -163,8 +166,10 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 - `feerates.js` - the fee-asset exchange-rate helper behind `GET /feerates`,
   with its own suite in `feerates.test.mjs`.
 - `run-sequentia-explorer.sh`, `run-testnet4-explorer.sh` - local dev servers.
-- `downloads/` - the `/download` landing page (committed; built artifacts are
-  dropped in at deploy time and are not committed).
+- `downloads/` - a copy of the `/download` page for a local run (built
+  artifacts are dropped in at deploy time and are not committed). The pages
+  the box serves, the full one and the Sequentia Core one at
+  `/download/core/`, are tracked in the `sequentia-testnet-ops` repository.
 - `deploy/` - production deployment: systemd user units + instructions.
 
 ## Sequentia changes vs upstream Esplora

@@ -294,10 +294,16 @@ app.get('/anchorstatus', (req, res) => {
   })
 })
 
-// Landing / greeting page for the Sequentia demo server: lists what's available.
-const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+// The two menu pages. The site root is the public front door and lists five
+// things: the explorer, the faucet, the Compages bridge, Emissio and the
+// Sequentia Core download. Everything else the box serves is listed on the
+// full menu at /secretfullmenu, which nothing links to: it is for people who
+// have been given the path. The product paths themselves are unchanged, since
+// the wallets, the extension and the nodes carry them hardcoded. One shell
+// renders both, so they are the same page with a different list.
+const menuPage = ({ cards, noindex }) => `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sequentia: testnet demo server</title>
+<title>Sequentia: testnet demo server</title>${noindex ? '\n<meta name="robots" content="noindex">' : ''}
 <link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
 <style>
   :root{color-scheme:dark}
@@ -322,18 +328,7 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
   </div>
   <p class="sub">A Bitcoin sidechain: Bitcoin anchoring, a BLS proof-of-stake committee, and an open any-asset fee market. This is the public demo server.</p>
   <div class="grid">
-    <a class="card" href="/explorer/"><h2>Block Explorer →</h2><p>Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).</p></a>
-    <a class="card" href="/wallet/"><h2>Web Wallet →</h2><p>A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.</p></a>
-    <a class="card" href="/pools/"><h2>Staking Pools &rarr;</h2><p>Every block producer on the Sequentia network: the stake lent to it, how reliably it produces, and what it has committed on-chain to paying its delegators. Delegate from any wallet; your coins never move.</p></a>
-    <a class="card" href="/dex/"><h2>SeqDEX →</h2><p>The disintermediated exchange of the Sequentia testnet: pure Lightning swaps on the LNDEX, atomic on-chain and covenant orders, a confidential book, and a marketplace for Lightning channel liquidity. Trades are signed by Ambra for Chromium, the browser extension wallet.</p></a>
-    <a class="card" href="/faucet"><h2>Faucet →</h2><p>Free testnet coins: tSEQ and sample assets (USDX, EURX, GOLD, SILVR, OILX), sent straight to any address — full node, desktop, mobile or web wallet.</p></a>
-    <a class="card" href="/emissio/"><h2>Emissio Rewards →</h2><p>The community issue register: earn Sequence tokens (SEQ), paid at mainnet launch, for completing testnet tasks, winning competitions and reporting vulnerabilities.</p></a>
-    <a class="card" href="/bridge/"><h2>Compages Bridge →</h2><p>Bridge into the Sequentia network from Ethereum (Sepolia: ether or any ERC-20), Bitcoin (testnet4: BTC to SBTC) and Solana (devnet: SOL or any SPL token); a deposit mints a Sequentia asset, a return releases the original.</p></a>
-    <a class="card" href="/lending/"><h2>Pignus Lending →</h2><p>Borrow one issued asset against another, with the loan’s terms compiled into a covenant the network enforces: nobody holds your collateral, nobody can change the deal after you agree it, and repaying needs no one’s permission. Native Bitcoin can be the collateral too, on the parent chain, bound to the debt by an adaptor signature rather than a covenant.</p></a>
-    <a class="card" href="/levo/"><h2>Levo Launchpad →</h2><p>Back new projects on Sequentia, or raise funds for your own: staked Sequence sets how much you can put into a sale, and a covenant holds the project's tokens from the moment they are locked until a buyer's transaction pays the treasury and takes them, in one step.</p></a>
-    <a class="card" href="/seqpal/"><h2>SeqPal Issuance →</h2><p>Tokenize and service compliant securities on Sequentia: structure an offering, issue a restricted asset whose transfer rules the policy server enforces at co-sign, and run the transfer-agent lifecycle. A proof of concept.</p></a>
-    <a class="card" href="/seqpal/id"><h2>SeqPal ID →</h2><p>One verified identity for issuing and holding SeqPal-managed restricted assets: create a SeqPal ID, carry your eligibility categories, and use them wherever these assets are accepted.</p></a>
-    <a class="card" href="/download/"><h2>Downloads →</h2><p>Sequentia Core, the full node and desktop wallet, and Fulmen, a SeqLN Lightning node with a desktop GUI, both for Linux and Windows. Ambra, the dual-chain Bitcoin and Sequentia wallet, for Android and for Chromium.</p></a>
+${cards.map(([href, title, text]) => `    <a class="card" href="${href}"><h2>${title} →</h2><p>${text}</p></a>`).join('\n')}
   </div>
   <footer>
     <div class="by">
@@ -344,11 +339,35 @@ const LANDING_HTML = `<!doctype html><html lang="en"><head><meta charset="utf-8"
     </div>
     Testnet only; assets carry no value.
   </footer>
-</div></body></html>`;
+</div></body></html>`
 
+const CARD = {
+  explorer: ['/explorer/', 'Block Explorer', 'Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).'],
+  wallet: ['/wallet/', 'Web Wallet', 'A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.'],
+  pools: ['/pools/', 'Staking Pools', 'Every block producer on the Sequentia network: the stake lent to it, how reliably it produces, and what it has committed on-chain to paying its delegators. Delegate from any wallet; your coins never move.'],
+  dex: ['/dex/', 'SeqDEX', 'The disintermediated exchange of the Sequentia testnet: pure Lightning swaps on the LNDEX, atomic on-chain and covenant orders, a confidential book, and a marketplace for Lightning channel liquidity. Trades are signed by Ambra for Chromium, the browser extension wallet.'],
+  faucet: ['/faucet', 'Faucet', 'Free testnet coins: tSEQ and sample assets (USDX, EURX, GOLD, SILVR, OILX), sent straight to any address — full node, desktop, mobile or web wallet.'],
+  emissio: ['/emissio/', 'Emissio Rewards', 'The community issue register: earn Sequence tokens (SEQ), paid at mainnet launch, for completing testnet tasks, winning competitions and reporting vulnerabilities.'],
+  bridge: ['/bridge/', 'Compages Bridge', 'Bridge into the Sequentia network from Ethereum (Sepolia: ether or any ERC-20), Bitcoin (testnet4: BTC to SBTC) and Solana (devnet: SOL or any SPL token); a deposit mints a Sequentia asset, a return releases the original.'],
+  lending: ['/lending/', 'Pignus Lending', 'Borrow one issued asset against another, with the loan’s terms compiled into a covenant the network enforces: nobody holds your collateral, nobody can change the deal after you agree it, and repaying needs no one’s permission. Native Bitcoin can be the collateral too, on the parent chain, bound to the debt by an adaptor signature rather than a covenant.'],
+  levo: ['/levo/', 'Levo Launchpad', 'Back new projects on Sequentia, or raise funds for your own: staked Sequence sets how much you can put into a sale, and a covenant holds the project\'s tokens from the moment they are locked until a buyer\'s transaction pays the treasury and takes them, in one step.'],
+  seqpal: ['/seqpal/', 'SeqPal Issuance', 'Tokenize and service compliant securities on Sequentia: structure an offering, issue a restricted asset whose transfer rules the policy server enforces at co-sign, and run the transfer-agent lifecycle. A proof of concept.'],
+  seqpalId: ['/seqpal/id', 'SeqPal ID', 'One verified identity for issuing and holding SeqPal-managed restricted assets: create a SeqPal ID, carry your eligibility categories, and use them wherever these assets are accepted.'],
+  downloads: ['/download/', 'Downloads', 'Sequentia Core, the full node and desktop wallet, and Fulmen, a SeqLN Lightning node with a desktop GUI, both for Linux and Windows. Ambra, the dual-chain Bitcoin and Sequentia wallet, for Android and for Chromium.'],
+  coreDownload: ['/download/core/', 'Download Sequentia Core', 'The full node and desktop wallet, for Linux and Windows. It validates the chain for itself and is the software a block producer runs.'],
+}
 
-// Greeting page at the site root.
-app.get('/', (req, res) => res.type('html').send(LANDING_HTML))
+// The public front door.
+const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.faucet, CARD.bridge, CARD.emissio, CARD.coreDownload] })
+// Every product the box serves, at a path nothing links to. noindex keeps a
+// search engine from turning an unlinked page into a linked one.
+const FULL_MENU_HTML = menuPage({ noindex: true, cards: [
+  CARD.explorer, CARD.wallet, CARD.pools, CARD.dex, CARD.faucet, CARD.emissio, CARD.bridge,
+  CARD.lending, CARD.levo, CARD.seqpal, CARD.seqpalId, CARD.downloads,
+] })
+
+app.get('/', (req, res) => res.type('html').send(ROOT_HTML))
+app.get('/secretfullmenu', (req, res) => res.type('html').send(FULL_MENU_HTML))
 
 
 // Static assets (serves dist/explorer/**, dist/testnet4/**). express.static itself redirects the
@@ -358,7 +377,7 @@ app.use(express.static(DIST))
 // SPA fallbacks: client-side routes (e.g. /explorer/block/<hash>) -> the right index.html.
 app.get('/explorer/*', (req, res) => res.sendFile(path.join(DIST, 'explorer', 'index.html')))
 app.get('/testnet4/*', (req, res) => res.sendFile(path.join(DIST, 'testnet4', 'index.html')))
-app.get('*', (req, res) => res.redirect('/')) // unknown path -> greeting
+app.get('*', (req, res) => res.redirect('/')) // unknown path -> the front door
 
 // Backstop: every 20s, forward any still-unbroadcast tx in the explorer node's mempool to
 // a producer, so nothing sits unmined even if it arrived before this server started or via

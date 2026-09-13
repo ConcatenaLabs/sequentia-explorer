@@ -5,7 +5,7 @@ The public front door of the Sequentia testnet site. Two things live here:
 - `esplora/` — a vendored fork of Blockstream Esplora, the explorer frontend, built to static
   assets under `esplora/dist/{explorer,testnet4}` (gitignored; not source).
 - `serve-public.js` — one hand-written Express 4 server (~600 lines) that serves those static
-  builds and everything else on the domain: the wallet, the download page, the faucet page, and
+  builds and everything else on the domain: the two menu pages, the wallet, the download pages, the faucet page, and
   reverse proxies to the indexers, registry, price feed, DEX and order-book relays.
 
 The indexer itself is **not** here; it was split out to

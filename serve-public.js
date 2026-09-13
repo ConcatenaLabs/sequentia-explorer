@@ -294,9 +294,9 @@ app.get('/anchorstatus', (req, res) => {
   })
 })
 
-// The two menu pages. The site root is the public front door and lists five
-// things: the explorer, the faucet, the Compages bridge, Emissio and the
-// Sequentia Core download. Everything else the box serves is listed on the
+// The two menu pages. The site root is the public front door and lists six
+// things: the explorer, the staking pools, the faucet, the Compages bridge,
+// Emissio and the Sequentia Core download. Everything else the box serves is listed on the
 // full menu at /secretfullmenu, which nothing links to: it is for people who
 // have been given the path. The product paths themselves are unchanged, since
 // the wallets, the extension and the nodes carry them hardcoded. One shell
@@ -358,7 +358,7 @@ const CARD = {
 }
 
 // The public front door.
-const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.faucet, CARD.bridge, CARD.emissio, CARD.coreDownload] })
+const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.pools, CARD.faucet, CARD.bridge, CARD.emissio, CARD.coreDownload] })
 // Every product the box serves, at a path nothing links to. noindex keeps a
 // search engine from turning an unlinked page into a linked one.
 const FULL_MENU_HTML = menuPage({ noindex: true, cards: [

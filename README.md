@@ -118,8 +118,8 @@ node serve-public.js          # everything on one port, default :8080
 `/explorer/` (Sequentia) and `/testnet4/` (Bitcoin testnet4). `serve-public.js`
 serves the static build plus, on the same origin:
 
-- the front page at `/`, linking the explorer, the faucet, the Compages
-  bridge, Emissio rewards and the Sequentia Core download page
+- the front page at `/`, linking the explorer, the staking pool board, the
+  faucet, the Compages bridge, Emissio rewards and the Sequentia Core download page
   (`/download/core/`); and the full menu at `/secretfullmenu`, linked from
   nowhere, listing every public service on the domain: the explorer, web
   wallet, staking pool board, SeqDEX, faucet, Emissio rewards, Compages

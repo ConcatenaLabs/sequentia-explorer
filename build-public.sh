@@ -22,8 +22,11 @@ REL_MENU='{"Sequentia Testnet":"/explorer/","Bitcoin Testnet4":"/testnet4/"}'
 # [domain, ticker, name, precision, verified, supervised] -- and paths under /registry are
 # origin-absolute, so this points at the registry itself rather than a copy that
 # could go stale.
+# CONTRACT_MAP_URL, the registry's contract index, is what names the template a
+# Simplicity spend runs; without it no contract is labelled.
 DEST=dist/explorer BASE_HREF=/explorer/ API_URL=/api \
   ASSET_MAP_URL=/registry/index.minimal.json \
+  CONTRACT_MAP_URL=/registry/contracts/index.minimal.json \
   MENU_ITEMS="$REL_MENU" \
   PARENT_CHAIN_EXPLORER_BLOCK='/testnet4/block/{hash}' \
   ./build.sh sequentia-testnet

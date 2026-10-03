@@ -22,14 +22,19 @@ npm install                     # Express 4, for serve-public.js
 node serve-public.js            # default :8080
 ```
 
-`package.json` has **no `scripts` block** — there is no `npm start` and no `npm test`. The only
-automated test is:
+`package.json` has **no `scripts` block** — there is no `npm start` and no `npm test`. The
+automated tests are:
 
 ```sh
-node --test feerates.test.mjs
+node --test feerates.test.mjs contract-labels.test.mjs
 ```
 
-which covers `intersectAtMinimum` in `feerates.js` and nothing else. There is no CI.
+`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `contract-labels.test.mjs`
+covers the contract labels in `esplora/client/src/lib/contracts.js` on recorded regtest
+transactions. `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
+electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six
+environment variables name the binaries; its header lists them. It builds into
+`esplora/dist/explorer`. There is no CI.
 
 `deploy/systemd/` holds the three units (the server plus the two electrs instances) and
 `deploy/README.md` documents the environment variables and install steps.

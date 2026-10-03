@@ -7,6 +7,7 @@ import segwitGainsView from './tx-segwit-gains'
 import { formatSat, formatTime, formatVMB, formatNumber, formatAssetValue, formatAssetValues, explicitOutValues, tickerOf, formatFeeRate, refValueStr, refValueEl, refValueOfListEl } from './util'
 import { isAllUnconfidential, isAllNative, isRbf, outTotal, updateQuery } from '../util'
 import { nativeAssetId } from '../const'
+import { contractInputs, contractOutputs } from '../lib/contracts'
 
 // Require behind env conditional so it gets removed by `envify` on non-elements builds
 const deduceBlinded = process.env.IS_ELEMENTS && require('../lib/deduce-blinded').deduceBlinded
@@ -59,13 +60,17 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S
   // Try deducing unknown blinded ins/outs (elements only)
   if (process.env.IS_ELEMENTS) deduceBlinded(tx)
 
+  // The contract each input spends and each output continues, by the registry's index
+  const contractIns = contractInputs(tx, S.contractMap)
+      , contractOuts = contractOutputs(tx, S.contractMap, contractIns)
+
   return <div className="transaction-box" id="transaction-box">
     <div className="header">
       <div className="txn font-p2"><a href={`tx/${tx.txid}`}>{tx.txid}</a></div>
       {btnDetails(tx.txid, vopt.isOpen, query, t)}
     </div>
     <div className="ins-and-outs">
-      <div className="vins">{tx.vin.map((vin, index) => vinView(vin, { ...vopt, index }))}</div>
+      <div className="vins">{tx.vin.map((vin, index) => vinView(vin, { ...vopt, index, contract: contractIns[index] }))}</div>
 
 
       <div className="ins-and-outs_spacer">
@@ -76,7 +81,7 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S
 
 
       <div className="vouts">{tx.vout.map((out, index) =>
-        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index) }))}
+        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index), contract: contractOuts[index] }))}
       </div>
     </div>
     <div className="footer">

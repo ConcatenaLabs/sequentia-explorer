@@ -57,6 +57,15 @@ details, mempool), plus Sequentia-specific views:
   issuance, supply, and transactions. Asset names, tickers, and display
   precision come from the Sequentia Asset Registry (`ASSET_MAP_URL`, served
   same-origin at `/registry/index.minimal.json`).
+- **Contracts.** A Simplicity spend is labelled with its template's name and
+  spending path (for example `drip · sequentia/faucet-drip v1`), linked to the
+  template's record in the registry, when the registry has verified a template
+  with that commitment root (`CONTRACT_MAP_URL`, served same-origin at
+  `/registry/contracts/index.minimal.json`). An output that continues the
+  contract an input spent is labelled as its next state, and an output paying a
+  registered instance as that contract; either links in its header to the
+  transaction that spends it next, so a contract such as the faucet's reserve
+  can be followed from one spend to the next without opening details.
 - **Per-asset amounts and any-asset fees.** Sequentia has an open fee market:
   a transaction fee can be paid in any accepted asset, so fee rates are shown
   in the fee asset's own base units per vByte (never "sat/vB", which is
@@ -165,6 +174,12 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 - `serve-public.js` - the production static+proxy server (Express 4).
 - `feerates.js` - the fee-asset exchange-rate helper behind `GET /feerates`,
   with its own suite in `feerates.test.mjs`.
+- `contract-labels.test.mjs` - the contract labels
+  (`esplora/client/src/lib/contracts.js`) on a drip and its funding
+  transaction recorded from a regtest chain (`test/fixtures/`);
+  `contract-labels.regtest.test.mjs` - the same end to end: a local chain, the
+  drip tool, sequentia-electrs, the registry, and this explorer built, served by
+  `serve-public.js` and rendered in headless Chromium.
 - `run-sequentia-explorer.sh`, `run-testnet4-explorer.sh` - local dev servers.
 - `downloads/` - a copy of the `/download` page for a local run (built
   artifacts are dropped in at deploy time and are not committed). The pages
@@ -177,7 +192,8 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 The fork keeps upstream's structure; the Sequentia work is concentrated in:
 
 - `esplora/flavors/sequentia-testnet/` - new flavor: chain config, asset
-  registry wiring (`ASSET_MAP_URL`), branding CSS, network-switcher styling.
+  registry wiring (`ASSET_MAP_URL`), contract index (`CONTRACT_MAP_URL`),
+  branding CSS, network-switcher styling.
 - `esplora/flavors/bitcoin-testnet4/` - parent-chain flavor used by the
   second explorer.
 - `esplora/client/src/views/block.js` - Bitcoin anchor row, PoS committee
@@ -193,7 +209,10 @@ The fork keeps upstream's structure; the Sequentia work is concentrated in:
   (reference currency, number/time format, theme).
 - `esplora/client/src/views/lander.js`, `navbar.js`, `footer.js` - Sequentia
   and Concatena Labs branding.
-- `esplora/client/src/app.js` - market-data price fetch, settings wiring.
+- `esplora/client/src/lib/contracts.js`, `views/tx-vin.js`, `views/tx-vout.js` -
+  contract labels and next-spend links from the registry's contract index.
+- `esplora/client/src/app.js` - market-data price fetch, contract index fetch,
+  settings wiring.
 
 Upstream documentation is kept for reference: `esplora/README.md` (build
 system, configuration options, upstream Docker deployment) and
@@ -202,9 +221,19 @@ system, configuration options, upstream Docker deployment) and
 ## Contributing
 
 Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
-The server-side fee-rate helper is covered by `node --test feerates.test.mjs`;
-the explorer views themselves have no automated coverage, so check them by
-clicking through the affected pages against a running API.
+The tests:
+
+```sh
+node --test feerates.test.mjs contract-labels.test.mjs
+SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
+  node --test contract-labels.regtest.test.mjs
+```
+
+The second needs a built node, the faucet's drip tool, a sequentia-electrs
+binary, a registry checkout, `seqc` from sequentia-contracts and a Chromium; its
+header says which is which, and it is skipped without them. Other views have no
+automated coverage, so check them by clicking through the affected pages
+against a running API.
 
 ## License
 

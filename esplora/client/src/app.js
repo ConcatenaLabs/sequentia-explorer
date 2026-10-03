@@ -24,6 +24,7 @@ import {
     calculateOverpayment,
 } from './util'
 import l10n, { defaultLang } from './l10n'
+import { contractOutputs } from './lib/contracts'
 import * as views from './views'
 
 const apiBase = (process.env.API_URL || '/api').replace(/\/+$/, '')
@@ -272,6 +273,14 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
         // use an empty object if the map fails loading for any reason
         .merge(extractErrors(HTTP.select('asset-map')).mapTo({}))
 
+  // SEQUENTIA: the registry's contract index, which names the template a
+  // Simplicity spend runs. Loaded in the background and never blocks rendering;
+  // an empty index on failure, so a page simply shows no contract names.
+  , contractMap$ = !process.env.CONTRACT_MAP_URL ? O.of({}) :
+      reply('contract-map')
+        .merge(extractErrors(HTTP.select('contract-map')).mapTo({}))
+        .startWith({})
+
   // SEQUENTIA: market-data prices ({UPPER_TICKER: base/USD price}) for the user-chosen
   // reference-currency valuation. Flattened from /prices ({TICKER:{price,...}}); an empty
   // map on failure so the app still renders (no "≈"). combine() starts it at null.
@@ -328,7 +337,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$
                      , goAddr$, addr$, addrTxs$, addrQR$
-                     , assetMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
+                     , assetMap$, contractMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
                      })
 
@@ -381,6 +390,13 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     , openTx$.filter(notNully)
         .map(txid           => ({ category: 'tx-spends',  method: 'GET', path: `/tx/${txid}/outspends`, txid }))
 
+    // SEQUENTIA: and for a transaction with an output that holds a contract,
+    // so its header links to the contract's next spend without opening details
+    , O.combineLatest(tx$.filter(notNully), contractMap$)
+        .filter(([ tx, map ]) => contractOutputs(tx, map).some(Boolean))
+        .distinctUntilChanged(([ a ], [ b ]) => a === b)
+        .map(([ tx ])       => ({ category: 'tx-spends',  method: 'GET', path: `/tx/${tx.txid}/outspends`, txid: tx.txid, bg: true }))
+
     // in browser env, get the tip every 30s (but only when the page is active) or when we render a block/tx/addr, but not more than once every 5s
     // in server env, just get it once
     , (process.browser ? O.merge(tickWhileFocused(30000), goBlock$, goTx$, goAddr$).throttleTime(5000)
@@ -429,6 +445,10 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     // fetch asset map index on page load (once, as a foreground request)
     , !process.env.ASSET_MAP_URL ? O.empty() : O.of(
                                 { category: 'asset-map',  method: 'GET', path: process.env.ASSET_MAP_URL, bg: true })
+
+    // SEQUENTIA: fetch the registry's contract index once on load
+    , !process.env.CONTRACT_MAP_URL ? O.empty() : O.of(
+                                { category: 'contract-map', method: 'GET', path: process.env.CONTRACT_MAP_URL, bg: true })
 
     // SEQUENTIA: fetch market-data prices once on load, for reference-currency valuation
     , !process.env.IS_ELEMENTS ? O.empty() : O.of(

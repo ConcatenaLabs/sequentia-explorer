@@ -243,3 +243,15 @@ html[data-seq-theme="light"] a { color: #9a6f00; }
 /* KEEP dark + on-brand: the brand chip and the network switcher (designed on black
    so the amber/orange accents stay legible) — leave their base dark rules intact. */
 html[data-seq-theme="light"] .navbar-brand { background: var(--seq-dark); }
+
+/* ---- Contract labels ------------------------------------------------------ */
+/* The template a Simplicity spend runs, named from the registry, and the output
+   that carries the contract on to its next spend. */
+.contract-label {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 0.85em;
+  color: var(--seq-amber);
+}
+.contract-label a { color: inherit; text-decoration: underline; }
+.contract-next { font-size: 0.85em; }

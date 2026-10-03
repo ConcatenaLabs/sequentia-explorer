@@ -1,5 +1,16 @@
 import { linkToParentOut, formatOutAmount, formatAssetAmount, formatHex, linkToAddr, formatNumber, hexToBase64 } from './util'
 import { isSimplicitySpend, getSimplicityWitness } from '../lib/elements.js'
+import { contractName } from '../lib/contracts'
+
+// The registry's record of a template, beside its contract index.
+const contractBase = (process.env.CONTRACT_MAP_URL || '').replace(/\/index\.minimal\.json$/, '')
+export const contractLink = (c, text) => contractBase && c.template_hash
+  ? <a href={`${contractBase}/${c.template_hash}`} target="_blank" rel="external">{text}</a>
+  : text
+
+// Under an input or output's header: the contract it belongs to.
+export const contractBadge = (c, what) => c &&
+  <span className="contract-label">{what} {c.candidates ? contractName(c) : contractLink(c, contractName(c))}</span>
 
 const layout = (vin, desc, body, { t, ...S }) =>
   <div class={{ vin: true, active: isActive(vin, S), unblinded: isUnblinded(vin) }}>
@@ -34,14 +45,33 @@ const pegin = (vin, { isOpen, t, ...S }) => layout(
 
 const getAssetMeta = (vin, S) => vin.issuance && vin.issuance.asset_id && S.assetMap && S.assetMap[vin.issuance.asset_id]
 
-const standard = (vin, { isOpen, t, ...S }, assetMeta=getAssetMeta(vin, S)) => layout(
+const standard = (vin, { isOpen, t, contract, ...S }, assetMeta=getAssetMeta(vin, S)) => layout(
   vin
 
 , vin.is_coinbase
     ? t`Coinbase`
-    : <a href={`tx/${vin.txid}?output:${vin.vout}`}>{`${vin.txid}:${vin.vout}`}</a>
+    : [ <a href={`tx/${vin.txid}?output:${vin.vout}`}>{`${vin.txid}:${vin.vout}`}</a>
+      , contract && <br/>
+      , contractBadge(contract, contract && contract.path ? `${contract.path} ·` : t`Contract`) ]
 
 , isOpen && <div className="vin-body">
+    { contract && [
+      <div className="vin-body-row">
+        <div>{t`Contract`}</div>
+        <div>{contract.candidates
+          ? contract.candidates.map((c, i) => [ i ? ', ' : '', contractLink(c, contractName(c)) ])
+          : [ contractLink(contract, contractName(contract)), ' ', <span className="mono">{contract.template_hash}</span> ]}</div>
+      </div>
+    , contract.path && <div className="vin-body-row">
+        <div>{t`Spending path`}</div>
+        <div>{contract.path}{contract.leaf && contract.leaf != contract.path ? ` (${t`leaf`} ${contract.leaf})` : ''}</div>
+      </div>
+    , <div className="vin-body-row">
+        <div>{t`Previous state`}</div>
+        <div><a href={`tx/${vin.txid}?output:${vin.vout}`} className="mono">{`${vin.txid}:${vin.vout}`}</a></div>
+      </div>
+    ] }
+
     { vin.issuance && [
 
       <div className="vin-body-row">

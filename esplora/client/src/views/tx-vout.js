@@ -1,4 +1,5 @@
 import { formatOutAmount, linkToAddr, linkToParentAddr, formatNumber } from './util'
+import { contractBadge } from './tx-vin'
 
 const unspendable_types = [ 'op_return', 'provably_unspendable', 'fee' ]
 
@@ -24,13 +25,26 @@ const fee = (vout, { t, index, ...S }) => layout(vout, t`Transaction fees`, null
 // confidential output. Truly blinded outputs (value == null) stay "Confidential".
 const isUnblinded = vout => vout.value != null
 
-const standard = (vout, { isOpen, spend, t, ...S }) => layout(
+// An output that holds a contract: the next state of a contract an input spent,
+// or a registered instance. Its header links to the transaction that spends it,
+// so a contract can be followed from one spend to the next.
+const contractHeader = (contract, spend, t) => contract && [
+  <br/>
+, contractBadge(contract, contract.successor_of != null ? t`Next state of input #${contract.successor_of} ·` : t`Contract`)
+, spend && <span className="contract-next">{' '}{
+    spend.spent ? <a href={`tx/${spend.txid}?input:${spend.vin}`} className="contract-next-spend">{t`next spend`} &rarr;</a>
+                : t`unspent`
+  }</span>
+]
+
+const standard = (vout, { isOpen, spend, t, contract, ...S }) => layout(
   vout
 
-, vout.pegout ? (vout.pegout.scriptpubkey_address ? <span>{t`Peg-out to`}<br/>{linkToParentAddr(vout.pegout.scriptpubkey_address)}</span> : t`Peg-out`)
- : vout.scriptpubkey_address ? linkToAddr(vout.scriptpubkey_address)
- : vout.scriptpubkey_type ? vout.scriptpubkey_type.toUpperCase()
- : null
+, [ vout.pegout ? (vout.pegout.scriptpubkey_address ? <span>{t`Peg-out to`}<br/>{linkToParentAddr(vout.pegout.scriptpubkey_address)}</span> : t`Peg-out`)
+  : vout.scriptpubkey_address ? linkToAddr(vout.scriptpubkey_address)
+  : vout.scriptpubkey_type ? vout.scriptpubkey_type.toUpperCase()
+  : t`Nonstandard`
+  , contractHeader(contract, spend, t) ]
 
 , isOpen && <div className="vout-body">
     { vout.scriptpubkey_type &&

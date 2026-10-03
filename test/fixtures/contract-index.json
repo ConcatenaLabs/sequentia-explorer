@@ -1,0 +1,20 @@
+{
+  "leaves": {
+    "5251ec00d9799dbcdb31da4534f25ef9960321f195e2e24ef7125c46f24b972a": [
+      [
+        "12986f202fbfb850f7699c5d5188f261f276de6c7038142f0a28bbb672b5af34",
+        "sequentia/faucet-drip",
+        1,
+        "drip",
+        "drip"
+      ]
+    ]
+  },
+  "scripts": {
+    "51205a5d4f74ddea73f6d65ae3b7e294a642d42c71154455459a211f4304cd93a4c7": [
+      "12986f202fbfb850f7699c5d5188f261f276de6c7038142f0a28bbb672b5af34",
+      "sequentia/faucet-drip",
+      1
+    ]
+  }
+}

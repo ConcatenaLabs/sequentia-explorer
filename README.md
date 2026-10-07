@@ -176,7 +176,10 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 - `feerates.js` - the fee-asset exchange-rate helper behind `GET /feerates`,
   with its own suite in `feerates.test.mjs`.
 - `feeinfo.js` - the fee-market reduction and the fee-level rule behind
-  `GET /feeinfo`, with its own suite in `feeinfo.test.mjs`.
+  `GET /feeinfo`, with its own suite in `feeinfo.test.mjs`;
+  `feeinfo.regtest.test.mjs` - the same end to end: a local chain kept
+  congested, and a payment at every level checked against the blocks it was
+  promised.
 - `contract-labels.test.mjs` - the contract labels
   (`esplora/client/src/lib/contracts.js`) on a drip and its funding
   transaction recorded from a regtest chain (`test/fixtures/`);
@@ -230,6 +233,7 @@ The tests:
 node --test feerates.test.mjs feeinfo.test.mjs contract-labels.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
+SEQUENTIA_BIN=... node --test feeinfo.regtest.test.mjs
 ```
 
 The second needs a built node, the faucet's drip tool, a sequentia-electrs

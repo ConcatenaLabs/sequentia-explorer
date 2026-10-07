@@ -75,7 +75,7 @@ live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (
   [`sequentia-registry`](https://github.com/ConcatenaLabs/sequentia-registry);
   `/prices`, `/dex`, `/seqob*` and `/bridge` proxy to their own services.
 - The server never speaks JSON-RPC itself. Where it needs the node (broadcast override, fee
-  rates, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
+  rates, fee info, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
   and inherits the node's cookie auth. That is why no RPC credentials appear anywhere in this
   repo — keep it that way.
 

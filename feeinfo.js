@@ -75,9 +75,11 @@ function reduceCongestion(nodes) {
 // -incrementalrelayfee=0, where two levels could otherwise tie on a tiny floor.
 function feeTiers(F, N, I) {
   const step = Math.max(I, 1)
+  // Integer ratios, not 1.1 and 1.25: 100 * 1.1 is 110.00000000000001 in
+  // floating point and would ceil to 111.
   return {
-    low: Math.ceil(F * 1.1),
-    medium: Math.ceil(N * 1.25) + step,
+    low: Math.ceil((F * 11) / 10),
+    medium: Math.ceil((N * 5) / 4) + step,
     high: 2 * N + 2 * step,
     highest: 4 * N + 4 * step,
   }

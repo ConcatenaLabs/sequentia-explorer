@@ -50,15 +50,25 @@ test('history lifts a level the queue alone would have priced too low', () => {
   assert.equal(out.tiers.medium.feerate, 1800, 'medium ≥ E(3)');
   assert.equal(out.tiers.high.feerate, 3000, 'high ≥ E(2)');
   assert.equal(out.tiers.highest.feerate, 4500, 'highest ≥ 1.5 E(2)');
-  assert.equal(out.tiers.low.blocks, null, '110 meets no estimate, not even E(12) = 150');
+  assert.equal(out.tiers.low.feerate, 150, 'low ≥ E(12): the economical choice, not the floor');
+  assert.equal(out.tiers.low.blocks, 12);
 });
 
 test('a level under the cut gets the blocks history supports', () => {
-  assert.equal(etaBlocks(700, 1000, true, { 2: 3000, 3: 1800, 6: 600, 12: 150 }), 6);
-  assert.equal(etaBlocks(200, 1000, true, { 2: 3000, 3: 1800, 6: 600, 12: 150 }), 12);
+  const E = { 2: 3000, 3: 1800, 6: 600, 12: 150 };
+  assert.equal(etaBlocks(700, 1000, true, E), 6);
+  assert.equal(etaBlocks(200, 1000, true, E), 12);
   assert.equal(etaBlocks(1000, 1000, true, {}), null, 'a tie with the cut on a full block loses');
-  assert.equal(etaBlocks(1001, 1000, true, {}), 1);
+  assert.equal(etaBlocks(1001, 1000, true, {}), null, 'barely above the cut is outbid by what arrives next');
+  assert.equal(etaBlocks(1250, 1000, true, {}), 1, 'the next block, with the margin medium is priced with');
   assert.equal(etaBlocks(100, 100, false, {}), 1, 'a block with room takes everything that relays');
+});
+
+test('a flat estimator does not shorten the promise of a level priced for twelve blocks', () => {
+  // Measured on regtest: 270 for every target, and a low priced at E(12) took four blocks.
+  const flat = { 2: 270, 3: 270, 6: 270, 12: 270 };
+  assert.equal(etaBlocks(270, 3206, true, flat, 12), 12);
+  assert.equal(etaBlocks(270, 3206, true, flat, 2), 2);
 });
 
 test('the STRICTEST node wins, whichever it is', () => {

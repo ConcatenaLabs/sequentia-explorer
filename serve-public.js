@@ -292,9 +292,12 @@ const nodeFeeView = (datadir, cb) => {
   })
 }
 
+// FEEINFO_CACHE_MS=0 turns the cache off, for the regtest run that reads the
+// queue after every block.
+const FEEINFO_CACHE_MS = Number(process.env.FEEINFO_CACHE_MS ?? 5000)
 let feeinfoCache = { at: 0, body: null }
 app.get('/feeinfo', (req, res) => {
-  if (feeinfoCache.body && Date.now() - feeinfoCache.at < 5000) return res.type('json').send(feeinfoCache.body)
+  if (feeinfoCache.body && Date.now() - feeinfoCache.at < FEEINFO_CACHE_MS) return res.type('json').send(feeinfoCache.body)
   let pending = FEERATES_DATADIRS.length
   const results = []
   let failed = false

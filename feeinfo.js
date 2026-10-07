@@ -83,12 +83,17 @@ function reduceEstimates(perNode) {
 // THE LEVELS. Derived from the next-block price N, the relay floor F, the
 // replacement increment I, and the estimates E(k) when there are any:
 //
-//   low      ceil(F × 1.1)              the cheapest fee that still relays. It waits
-//                                       whenever blocks are full. The 10% covers
-//                                       fee-asset rates moving between sizing and
-//                                       relay (the price server re-quotes them every
-//                                       block), which would otherwise drop an
-//                                       exact-floor fee under the floor.
+//   low      ceil(F × 1.1), ≥ E(12)     the economical choice: what history says
+//                                       confirms within about twelve blocks. With no
+//                                       history it is the cheapest fee that still
+//                                       relays, and promises nothing while blocks are
+//                                       full. The 10% covers fee-asset rates moving
+//                                       between sizing and relay (the price server
+//                                       re-quotes them every block), which would
+//                                       otherwise drop an exact-floor fee under the
+//                                       floor. On a congested regtest a floor-priced
+//                                       low never confirmed in 30 blocks: honest, and
+//                                       useless as a level, hence E(12).
 //   medium   ceil(N × 1.25) + I, ≥ E(3) the next block as things stand, with a margin.
 //                                       Exactly N loses: the cut moves while the block
 //                                       is still being filled, and a bump that aimed
@@ -109,7 +114,7 @@ function feeTiers(F, N, I, E = {}) {
   const atLeast = (v, e) => (e ? Math.max(v, e) : v)
   // Integer ratios, not 1.1 and 1.25: 100 * 1.1 is 110.00000000000001 in
   // floating point and would ceil to 111.
-  const low = Math.ceil((F * 11) / 10)
+  const low = atLeast(Math.ceil((F * 11) / 10), E[12])
   let medium = atLeast(Math.ceil((N * 5) / 4) + step, E[3])
   let high = atLeast(2 * N + 2 * step, E[2])
   let highest = atLeast(4 * N + 4 * step, E[2] ? Math.ceil((E[2] * 3) / 2) : 0)
@@ -120,15 +125,27 @@ function feeTiers(F, N, I, E = {}) {
 }
 
 // How many blocks a fee rate R should take, or null when nothing supports a
-// number. Above the next-block cut (or anywhere on a block with room to spare)
-// it is the next block; otherwise the smallest target whose estimate R meets.
-// Paying exactly the cut on a full block is not enough: ties go to whoever was
-// there first.
-function etaBlocks(R, N, full, E) {
-  if (!full || R > N) return 1
-  for (const k of ESTIMATE_TARGETS) if (E[k] && R >= E[k]) return k
+// number. Measured on a congested regtest, both of the obvious answers broke
+// their promise:
+//
+//   - "above the cut, so the next block": 233 against a cut of 221 took two
+//     blocks, because what arrives after the snapshot outbids it. The next block
+//     is promised only with the same 25% margin medium is priced with.
+//   - "the smallest target whose estimate R meets": the estimator often answers
+//     one flat figure for every target (270 for 2, 3, 6 and 12 blocks), so a fee
+//     priced for twelve blocks was promised two and took four.
+//
+// So below the margin a level promises the target it was priced from
+// (`nominal`), never less than the smallest target history supports. With no
+// history that applies, it promises nothing.
+function etaBlocks(R, N, full, E, nominal = ESTIMATE_TARGETS[0]) {
+  if (!full || R >= Math.ceil((N * 5) / 4)) return 1
+  for (const k of ESTIMATE_TARGETS) if (E[k] && R >= E[k]) return Math.max(k, nominal)
   return null
 }
+
+// The target each level is priced from when it is not priced from the queue.
+const NOMINAL = { low: 12, medium: 3, high: 2, highest: 2 }
 
 // `nodes` is, per broadcast target, { congestion, estimates } — the parsed
 // getmempoolcongestion output and { target: estimatesmartfee output or null }.
@@ -140,7 +157,7 @@ function feeInfo(nodes) {
   const rates = feeTiers(r.floor, r.nextBlock, r.increment, E)
   const tiers = {}
   for (const [name, feerate] of Object.entries(rates))
-    tiers[name] = { feerate, blocks: etaBlocks(feerate, r.nextBlock, r.full, E) }
+    tiers[name] = { feerate, blocks: etaBlocks(feerate, r.nextBlock, r.full, E, NOMINAL[name]) }
   return {
     unit: 'reference fee atoms per 1000 vbytes',
     floor: r.floor,

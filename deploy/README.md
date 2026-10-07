@@ -41,7 +41,9 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    up in the merged book and fails to lift.
 3. **Node-backed helpers**: `serve-public.js` also shells out to a local
    `sequentia-cli` for the testnet faucet (`POST /faucet`), fee-asset exchange
-   rates (`GET /feerates`), anchor reads (`GET /anchor/:hash`,
+   rates (`GET /feerates`), the fee market and fee levels (`GET /feeinfo`,
+   read from the same `FEERATES_DATADIRS`, cached `FEEINFO_CACHE_MS`, default
+   5000), anchor reads (`GET /anchor/:hash`,
    `GET /anchorstatus`), and a `POST /api/tx` broadcast override that forwards
    raw transactions to the block producers (the committee mesh does not relay
    externally submitted transactions). These are configured by `FAUCET_CLI`,

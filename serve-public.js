@@ -10,6 +10,7 @@
 // Express 5 changed wildcard handling). See explorer/package.json.
 const express = require('express')
 const { intersectAtMinimum } = require('./feerates')
+const { feeInfo, ESTIMATE_TARGETS } = require('./feeinfo')
 const http = require('http')
 const path = require('path')
 
@@ -206,8 +207,9 @@ const FEERATES_DATADIRS = (process.env.FEERATES_DATADIRS
   ? process.env.FEERATES_DATADIRS.split(',').map(s => s.trim()).filter(Boolean)
   : [PRODUCER_DATADIR, BROADCAST_DATADIR])
 
-const cliJson = (datadir, method, cb) =>
-  execFile(FEERATES_CLI, ['-datadir=' + datadir, method], { timeout: 10000 }, (err, stdout) => {
+// `args` are fixed strings from this file, never request input.
+const cliJson = (datadir, method, cb, args = []) =>
+  execFile(FEERATES_CLI, ['-datadir=' + datadir, method, ...args], { timeout: 10000 }, (err, stdout) => {
     if (err) return cb(err)
     try { cb(null, JSON.parse(stdout)) } catch (e) { cb(e) }
   })
@@ -260,6 +262,55 @@ app.get('/feerates', (req, res) => {
 
       const body = JSON.stringify(intersectAtMinimum(results), null, 2)
       feeratesCache = { at: Date.now(), body }
+      res.type('json').send(body)
+    })
+  })
+})
+
+// Fee market: GET /feeinfo returns what the queue costs right now, what history
+// says fees took to confirm, and the fee levels (low / medium / high / highest)
+// the wallets offer, each with the blocks it should take — all in reference fee
+// atoms per 1000 vbytes. Read from the SAME nodes /feerates reads, the broadcast
+// targets, taking the strictest figure of each. The reduction and the level rule
+// live in feeinfo.js. No user input; cached for a few seconds because a block
+// lands every minute.
+//
+// One node's view: getmempoolcongestion (required — without it there is no
+// floor to stand behind) and estimatesmartfee per target (optional — a quiet
+// chain has no history, and that is an answer, not a failure).
+const nodeFeeView = (datadir, cb) => {
+  cliJson(datadir, 'getmempoolcongestion', (cerr, congestion) => {
+    if (cerr) return cb(cerr)
+    const estimates = {}
+    let left = ESTIMATE_TARGETS.length
+    for (const k of ESTIMATE_TARGETS) {
+      cliJson(datadir, 'estimatesmartfee', (eerr, e) => {
+        estimates[k] = eerr ? null : e
+        if (--left === 0) cb(null, { congestion, estimates })
+      }, [String(k), 'economical'])
+    }
+  })
+}
+
+// FEEINFO_CACHE_MS=0 turns the cache off, for the regtest run that reads the
+// queue after every block.
+const FEEINFO_CACHE_MS = Number(process.env.FEEINFO_CACHE_MS ?? 5000)
+let feeinfoCache = { at: 0, body: null }
+app.get('/feeinfo', (req, res) => {
+  if (feeinfoCache.body && Date.now() - feeinfoCache.at < FEEINFO_CACHE_MS) return res.type('json').send(feeinfoCache.body)
+  let pending = FEERATES_DATADIRS.length
+  const results = []
+  let failed = false
+  FEERATES_DATADIRS.forEach((datadir, i) => {
+    nodeFeeView(datadir, (err, view) => {
+      if (!err) results[i] = view
+      else failed = true
+      if (--pending) return
+      // Same rule as /feerates: a node we cannot read might hold a higher floor.
+      const info = failed ? null : feeInfo(results)
+      if (!info) return res.status(502).json({ error: 'fee info unavailable' })
+      const body = JSON.stringify(info, null, 2)
+      feeinfoCache = { at: Date.now(), body }
       res.type('json').send(body)
     })
   })

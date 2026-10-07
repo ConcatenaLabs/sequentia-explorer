@@ -26,10 +26,12 @@ node serve-public.js            # default :8080
 automated tests are:
 
 ```sh
-node --test feerates.test.mjs contract-labels.test.mjs
+node --test feerates.test.mjs feeinfo.test.mjs contract-labels.test.mjs
 ```
 
-`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `contract-labels.test.mjs`
+`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`, `feeinfo.test.mjs` the fee levels
+in `feeinfo.js` (and `feeinfo.regtest.test.mjs`, with `SEQUENTIA_BIN` set, checks them against a
+congested local chain in about two and a half minutes); `contract-labels.test.mjs`
 covers the contract labels in `esplora/client/src/lib/contracts.js` on recorded regtest
 transactions. `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
 electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six
@@ -74,7 +76,7 @@ live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (
   [`sequentia-registry`](https://github.com/ConcatenaLabs/sequentia-registry);
   `/prices`, `/dex`, `/seqob*` and `/bridge` proxy to their own services.
 - The server never speaks JSON-RPC itself. Where it needs the node (broadcast override, fee
-  rates, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
+  rates, fee info, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
   and inherits the node's cookie auth. That is why no RPC credentials appear anywhere in this
   repo — keep it that way.
 

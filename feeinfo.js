@@ -2,8 +2,9 @@
 // unit-tested without starting the server (same split as feerates.js).
 //
 // A wallet needs two things to offer a fee choice: what the queue costs right
-// now, and a small set of levels to pick from. The node answers the first with
-// getmempoolcongestion. The levels are defined HERE, once, rather than in each
+// now, and a small set of levels to pick from. The node answers the first twice:
+// getmempoolcongestion reads the queue as it is, estimatesmartfee reads the
+// history of how long fees took to confirm. The levels are defined HERE, once, rather than in each
 // wallet: Ambra is a phone app, and a rule that lives in the app can only change
 // with a release, while every wallet reading the same levels from one place
 // keeps them consistent with each other.
@@ -32,6 +33,7 @@ function reduceCongestion(nodes) {
   let floor = 0, nextBlock = 0, increment = 0, backlog = 0, txs = 0, vbytes = 0
   let full = false
   for (const c of nodes) {
+    if (!c) return null
     const relay = toAtoms(c.minrelaytxfee)
     const mempool = toAtoms(c.mempoolminfee)
     const inc = toAtoms(c.incrementalrelayfee)
@@ -54,40 +56,91 @@ function reduceCongestion(nodes) {
   return { floor, nextBlock, increment, backlog, txs, vbytes, full }
 }
 
-// THE LEVELS. All of them are derived from the next-block price N, the relay
-// floor F and the replacement increment I:
-//
-//   low      ceil(F × 1.1)       the cheapest fee that still relays. It waits
-//                                whenever blocks are full. The 10% covers fee-asset
-//                                rates moving between sizing and relay (the price
-//                                server re-quotes them every block), which would
-//                                otherwise drop an exact-floor fee under the floor.
-//   medium   ceil(N × 1.25) + I  the next block as things stand, with a margin.
-//                                Exactly N loses: the cut moves while the block is
-//                                still being filled, and the Qt bump that aimed at
-//                                N with no margin never got in.
-//   high     2N + 2I
-//   highest  4N + 4I            room above every producer's private reserve price,
-//                                which no node can observe.
-//
-// I also spaces the levels: with N ≥ F > 0 and I ≥ 1 they are strictly
-// increasing, so it is taken as at least 1 even on a node configured with
-// -incrementalrelayfee=0, where two levels could otherwise tie on a tiny floor.
-function feeTiers(F, N, I) {
-  const step = Math.max(I, 1)
-  // Integer ratios, not 1.1 and 1.25: 100 * 1.1 is 110.00000000000001 in
-  // floating point and would ceil to 111.
-  return {
-    low: Math.ceil((F * 11) / 10),
-    medium: Math.ceil((N * 5) / 4) + step,
-    high: 2 * N + 2 * step,
-    highest: 4 * N + 4 * step,
+// estimatesmartfee targets, in blocks. 1 is not asked: the estimator clamps it
+// to 2, and the next block is what getmempoolcongestion already answers, from
+// the queue as it is rather than from history.
+const ESTIMATE_TARGETS = [2, 3, 6, 12]
+
+// The history-based half: for each target, the HIGHEST estimate any node gives
+// (same reasoning as above), or null when no node has seen enough blocks to say.
+// `estimates` is, per node, { target: parsed estimatesmartfee output or null }.
+// "Insufficient data" is an answer, not a failure — the testnet is often too
+// quiet for one — so a missing estimate only leaves that target null.
+function reduceEstimates(perNode) {
+  const out = {}
+  for (const k of ESTIMATE_TARGETS) {
+    let best = null
+    for (const est of perNode) {
+      const e = est && est[k]
+      const atoms = e && e.feerate !== undefined ? toAtoms(e.feerate) : null
+      if (atoms !== null && atoms > 0) best = best === null ? atoms : Math.max(best, atoms)
+    }
+    out[k] = best
   }
+  return out
 }
 
+// THE LEVELS. Derived from the next-block price N, the relay floor F, the
+// replacement increment I, and the estimates E(k) when there are any:
+//
+//   low      ceil(F × 1.1)              the cheapest fee that still relays. It waits
+//                                       whenever blocks are full. The 10% covers
+//                                       fee-asset rates moving between sizing and
+//                                       relay (the price server re-quotes them every
+//                                       block), which would otherwise drop an
+//                                       exact-floor fee under the floor.
+//   medium   ceil(N × 1.25) + I, ≥ E(3) the next block as things stand, with a margin.
+//                                       Exactly N loses: the cut moves while the block
+//                                       is still being filled, and a bump that aimed
+//                                       at N with no margin never got in.
+//   high     2N + 2I,          ≥ E(2)
+//   highest  4N + 4I,   ≥ ceil(1.5 E(2)) room above every producer's private reserve
+//                                       price, which no node can observe.
+//
+// The queue is the primary signal because it is what the next producer will
+// actually rank; the estimates are a floor under it, because the queue is a
+// snapshot and a burst arriving after it is exactly what history has seen.
+//
+// I also spaces the levels, taken as at least 1 even on a node configured with
+// -incrementalrelayfee=0; and each level is lifted to one atom above the one
+// below, so they are strictly increasing whatever the estimates say.
+function feeTiers(F, N, I, E = {}) {
+  const step = Math.max(I, 1)
+  const atLeast = (v, e) => (e ? Math.max(v, e) : v)
+  // Integer ratios, not 1.1 and 1.25: 100 * 1.1 is 110.00000000000001 in
+  // floating point and would ceil to 111.
+  const low = Math.ceil((F * 11) / 10)
+  let medium = atLeast(Math.ceil((N * 5) / 4) + step, E[3])
+  let high = atLeast(2 * N + 2 * step, E[2])
+  let highest = atLeast(4 * N + 4 * step, E[2] ? Math.ceil((E[2] * 3) / 2) : 0)
+  medium = Math.max(medium, low + 1)
+  high = Math.max(high, medium + 1)
+  highest = Math.max(highest, high + 1)
+  return { low, medium, high, highest }
+}
+
+// How many blocks a fee rate R should take, or null when nothing supports a
+// number. Above the next-block cut (or anywhere on a block with room to spare)
+// it is the next block; otherwise the smallest target whose estimate R meets.
+// Paying exactly the cut on a full block is not enough: ties go to whoever was
+// there first.
+function etaBlocks(R, N, full, E) {
+  if (!full || R > N) return 1
+  for (const k of ESTIMATE_TARGETS) if (E[k] && R >= E[k]) return k
+  return null
+}
+
+// `nodes` is, per broadcast target, { congestion, estimates } — the parsed
+// getmempoolcongestion output and { target: estimatesmartfee output or null }.
 function feeInfo(nodes) {
-  const r = reduceCongestion(nodes)
+  if (!nodes.length) return null
+  const r = reduceCongestion(nodes.map(n => n && n.congestion))
   if (!r) return null
+  const E = reduceEstimates(nodes.map(n => n && n.estimates))
+  const rates = feeTiers(r.floor, r.nextBlock, r.increment, E)
+  const tiers = {}
+  for (const [name, feerate] of Object.entries(rates))
+    tiers[name] = { feerate, blocks: etaBlocks(feerate, r.nextBlock, r.full, E) }
   return {
     unit: 'reference fee atoms per 1000 vbytes',
     floor: r.floor,
@@ -97,8 +150,9 @@ function feeInfo(nodes) {
     backlog_blocks: r.backlog,
     mempool_txs: r.txs,
     mempool_vbytes: r.vbytes,
-    tiers: feeTiers(r.floor, r.nextBlock, r.increment),
+    estimates: E,
+    tiers,
   }
 }
 
-module.exports = { feeInfo, feeTiers, reduceCongestion }
+module.exports = { feeInfo, feeTiers, etaBlocks, reduceCongestion, reduceEstimates, ESTIMATE_TARGETS }

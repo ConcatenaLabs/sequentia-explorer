@@ -10,6 +10,7 @@
 // Express 5 changed wildcard handling). See explorer/package.json.
 const express = require('express')
 const { intersectAtMinimum } = require('./feerates')
+const { feeInfo } = require('./feeinfo')
 const http = require('http')
 const path = require('path')
 
@@ -260,6 +261,33 @@ app.get('/feerates', (req, res) => {
 
       const body = JSON.stringify(intersectAtMinimum(results), null, 2)
       feeratesCache = { at: Date.now(), body }
+      res.type('json').send(body)
+    })
+  })
+})
+
+// Fee market: GET /feeinfo returns what the queue costs right now and the fee
+// levels (low / medium / high / highest) the wallets offer, in reference fee
+// atoms per 1000 vbytes, from getmempoolcongestion on the SAME nodes /feerates
+// reads — the broadcast targets — taking the strictest figure of each. The
+// reduction and the level rule live in feeinfo.js. No user input; cached for a
+// few seconds because a block lands every minute.
+let feeinfoCache = { at: 0, body: null }
+app.get('/feeinfo', (req, res) => {
+  if (feeinfoCache.body && Date.now() - feeinfoCache.at < 5000) return res.type('json').send(feeinfoCache.body)
+  let pending = FEERATES_DATADIRS.length
+  const results = []
+  let failed = false
+  FEERATES_DATADIRS.forEach((datadir, i) => {
+    cliJson(datadir, 'getmempoolcongestion', (err, c) => {
+      if (!err) results[i] = c
+      else failed = true
+      if (--pending) return
+      // Same rule as /feerates: a node we cannot read might hold a higher floor.
+      const info = failed ? null : feeInfo(results)
+      if (!info) return res.status(502).json({ error: 'fee info unavailable' })
+      const body = JSON.stringify(info, null, 2)
+      feeinfoCache = { at: Date.now(), body }
       res.type('json').send(body)
     })
   })

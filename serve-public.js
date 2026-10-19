@@ -108,22 +108,30 @@ app.post('/api/tx', express.text({ type: () => true, limit: '500kb' }), (req, re
       let d; try { d = JSON.parse(so) } catch { return cb(null) }
       cb(d && TXID_RE.test(String(d.txid || '')) ? String(d.txid) : null)
     })
-  // Succeed if EITHER the producer or the explorer node accepts the tx. Capture
-  // the explorer-node result (don't drop it on a no-op callback).
+  // Succeed if EITHER the producer or the explorer node accepts the tx. Both are
+  // sent at once: one after the other, a slow producer held the wallet's answer for
+  // both timeouts in turn. The first node to accept answers; when neither does,
+  // both results are read to tell a benign re-broadcast from a refusal.
   let replied = false
   const reply = (status, body) => { if (replied) return; replied = true; res.status(status).type('text').send(body) }
-  send(PRODUCER_DATADIR, (perr, pstdout, pstderr) => {
-    send(BROADCAST_DATADIR, (berr, bstdout, bstderr) => {
-      const pout = String(pstdout || '').trim()
-      const bout = String(bstdout || '').trim()
-      const out = TXID_RE.test(pout) ? pout : (TXID_RE.test(bout) ? bout : '')
-      const emsg = String(pstderr || (perr && perr.message) || bstderr || (berr && berr.message) || '')
-      if (out) return reply(200, out)                                  // accepted by either -> txid
-      if (/already in (block chain|mempool)|txn-already/i.test(emsg))  // benign re-broadcast: recover the txid
-        return recoverTxid(txid => txid ? reply(200, txid) : reply(400, 'broadcast accepted but txid unavailable'))
-      reply(400, emsg.trim().split('\n').pop() || 'broadcast failed')
-    })
-  })
+  const results = {}
+  let pending = 2
+  const settle = () => {
+    const p = results.p, b = results.b
+    const emsg = String(p.stderr || (p.err && p.err.message) || b.stderr || (b.err && b.err.message) || '')
+    if (/already in (block chain|mempool)|txn-already/i.test(emsg))  // benign re-broadcast: recover the txid
+      return recoverTxid(txid => txid ? reply(200, txid) : reply(400, 'broadcast accepted but txid unavailable'))
+    reply(400, emsg.trim().split('\n').pop() || 'broadcast failed')
+  }
+  const take = key => (err, stdout, stderr) => {
+    results[key] = { err, stderr }
+    pending -= 1
+    const out = String(stdout || '').trim()
+    if (TXID_RE.test(out)) return reply(200, out)                      // accepted -> txid, at once
+    if (pending === 0) settle()
+  }
+  send(PRODUCER_DATADIR, take('p'))
+  send(BROADCAST_DATADIR, take('b'))
 })
 
 app.use('/api', proxyTo(SEQ_ELECTRS))

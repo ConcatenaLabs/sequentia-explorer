@@ -9,7 +9,7 @@
 // NOTE: requires Express 4 (the SPA '*' route below uses the v4 path syntax;
 // Express 5 changed wildcard handling). See explorer/package.json.
 const express = require('express')
-const { intersectAtMinimum } = require('./feerates')
+const { intersectAtMinimum, combineFeeInfo } = require('./feerates')
 const http = require('http')
 const path = require('path')
 
@@ -263,6 +263,48 @@ app.get('/feerates', (req, res) => {
       res.type('json').send(body)
     })
   })
+})
+
+// Every fee asset as the nodes we broadcast to see it (getfeeassetinfo): GET /feeinfo answers
+// { assets: { <hex>: { label, precision, registry_listed, market_price, accepted_by, nodes } } }.
+// accepted_by out of nodes is the wallet's light: all of them accept a fee in the asset, some, or
+// none. Same nodes as /feerates, so the two never disagree on who was asked. Short-cached.
+let feeinfoCache = { at: 0, body: null }
+app.get('/feeinfo', (req, res) => {
+  if (feeinfoCache.body && Date.now() - feeinfoCache.at < 15000) return res.type('json').send(feeinfoCache.body)
+  let pending = FEERATES_DATADIRS.length
+  const results = []
+  let failed = false
+  FEERATES_DATADIRS.forEach((datadir, i) => {
+    cliJson(datadir, 'getfeeassetinfo', (err, r) => {
+      if (!err) results[i] = r
+      else failed = true
+      if (--pending) return
+      if (failed || results.filter(Boolean).length !== FEERATES_DATADIRS.length)
+        return res.status(502).json({ error: 'fee asset info unavailable' })
+      const body = JSON.stringify({ assets: combineFeeInfo(results) }, null, 2)
+      feeinfoCache = { at: Date.now(), body }
+      res.type('json').send(body)
+    })
+  })
+})
+
+// How busy the next block is, from the node that builds blocks (getmempoolcongestion): the queue
+// in blocks and the cheapest rate that still makes the next block, optionally converted into a
+// fee asset (?asset=<label or hex>). Short-cached per asset.
+const congestionCache = new Map()
+app.get('/congestion', (req, res) => {
+  const asset = String(req.query.asset || '')
+  if (asset && !/^([0-9a-fA-F]{64}|[A-Za-z0-9._-]{1,32})$/.test(asset)) return res.status(400).json({ error: 'bad asset' })
+  const hit = congestionCache.get(asset)
+  if (hit && Date.now() - hit.at < 10000) return res.type('json').send(hit.body)
+  execFile(FEERATES_CLI, ['-datadir=' + PRODUCER_DATADIR, 'getmempoolcongestion', ...(asset ? [asset] : [])],
+    { timeout: 10000 }, (err, stdout) => {
+      if (err) return res.status(502).json({ error: 'congestion unavailable' })
+      try { JSON.parse(stdout) } catch { return res.status(502).json({ error: 'congestion unreadable' }) }
+      congestionCache.set(asset, { at: Date.now(), body: stdout })
+      res.type('json').send(stdout)
+    })
 })
 
 // Anchor read (Sequentia's Bitcoin-anchor view) for the wallet's cross-chain

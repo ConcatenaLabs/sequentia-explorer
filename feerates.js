@@ -37,4 +37,34 @@ function intersectAtMinimum(results) {
   return out
 }
 
-module.exports = { intersectAtMinimum }
+// What each node we broadcast to says about every fee asset, merged per asset: how many of them
+// accept a fee in it (listed and priced above zero), out of how many were asked. That is the
+// wallet's three-way light: accepted by all, by some, by none. Metadata (label, precision, the
+// registry flag, the market price) comes from the first node that reports the asset.
+//
+// `results` is one getfeeassetinfo answer per node, each keyed by asset hex. An asset a node does
+// not report counts as not accepted there.
+function combineFeeInfo(results) {
+  const nodes = results.length
+  const out = {}
+  for (const res of results) {
+    for (const [key, info] of Object.entries(res || {})) {
+      const hex = String((info && info.asset) || key).toLowerCase()
+      if (!/^[0-9a-f]{64}$/.test(hex)) continue
+      const cur = out[hex] || (out[hex] = {
+        asset: hex,
+        label: info.label || hex,
+        precision: Number.isFinite(Number(info.precision)) ? Number(info.precision) : 8,
+        registry_listed: !!info.registry_listed,
+        market_price: Number.isFinite(Number(info.market_price)) && Number(info.market_price) > 0 ? Number(info.market_price) : null,
+        accepted_by: 0,
+        nodes,
+      })
+      if (info.accepted === true) cur.accepted_by += 1
+      if (cur.market_price == null && Number(info.market_price) > 0) cur.market_price = Number(info.market_price)
+    }
+  }
+  return out
+}
+
+module.exports = { intersectAtMinimum, combineFeeInfo }

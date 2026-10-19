@@ -144,7 +144,9 @@ serves the static build plus, on the same origin:
 - static mounts: `/download` (release artifacts, `DOWNLOAD_DIR`) and `/wallet`
   (the built SWK web wallet, `WALLET_DIR`)
 - node-backed helpers that shell out to `sequentia-cli` on the host (testnet
-  faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, anchor
+  faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, how many
+  of the broadcast nodes accept each fee asset at `GET /feeinfo`, how busy the
+  next block is at `GET /congestion?asset=`, anchor
   reads at `GET /anchor/:hash` and `GET /anchorstatus`, and a `POST /api/tx`
   broadcast override that forwards raw transactions to a block producer). These
   default to the production box's node paths; override or ignore them for a
@@ -172,8 +174,8 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
   in `esplora/flavors/sequentia-testnet/` and `esplora/flavors/bitcoin-testnet4/`.
 - `build-public.sh` - builds both static flavors into `esplora/dist/`.
 - `serve-public.js` - the production static+proxy server (Express 4).
-- `feerates.js` - the fee-asset exchange-rate helper behind `GET /feerates`,
-  with its own suite in `feerates.test.mjs`.
+- `feerates.js` - the fee-asset helpers behind `GET /feerates` and
+  `GET /feeinfo`, with their own suite in `feerates.test.mjs`.
 - `contract-labels.test.mjs` - the contract labels
   (`esplora/client/src/lib/contracts.js`) on a drip and its funding
   transaction recorded from a regtest chain (`test/fixtures/`);

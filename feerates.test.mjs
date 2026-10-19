@@ -17,7 +17,7 @@ import assert from 'node:assert';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 
-const { intersectAtMinimum } = createRequire(import.meta.url)('./feerates.js');
+const { intersectAtMinimum, combineFeeInfo } = createRequire(import.meta.url)('./feerates.js');
 
 const GOLD = 'a1'.repeat(32), OILX = 'b2'.repeat(32), POLICY = 'c8'.repeat(32);
 
@@ -101,4 +101,33 @@ test('THE KEY-SPACE HAZARD: label-vs-hex must not silently empty the set', () =>
     node({ [GOLD]: 380e8 }),                       // displays as hex
   ]);
   assert.equal(out.GOLD, 380e8, 'the same asset must match across differing label configs');
+});
+
+// /feeinfo: how many of the nodes we broadcast to accept each fee asset.
+const info = (hex, o = {}) => ({ asset: hex, label: o.label || hex.slice(0, 4), precision: 8,
+  listed: o.accepted !== undefined ? true : false, accepted: !!o.accepted,
+  registry_listed: !!o.registry, ...(o.price != null ? { market_price: o.price } : {}) });
+
+test('feeinfo counts the nodes that accept each asset', () => {
+  const producer = { [GOLD]: info(GOLD, { accepted: true, price: 4000, label: 'GOLD', registry: true }),
+                     [OILX]: info(OILX, { accepted: true }) };
+  const explorer = { [GOLD]: info(GOLD, { accepted: true, price: 4000, label: 'GOLD', registry: true }),
+                     [OILX]: info(OILX, { accepted: false }) };
+  const out = combineFeeInfo([producer, explorer]);
+  assert.deepEqual(out[GOLD], { asset: GOLD, label: 'GOLD', precision: 8, registry_listed: true,
+    market_price: 4000, accepted_by: 2, nodes: 2 });
+  assert.equal(out[OILX].accepted_by, 1);      // some: amber
+  assert.equal(out[OILX].market_price, null);  // unquoted
+});
+
+test('an asset one node does not report counts as not accepted there', () => {
+  const out = combineFeeInfo([{ [POLICY]: info(POLICY, { accepted: true, price: 0.37 }) }, {}]);
+  assert.equal(out[POLICY].accepted_by, 1);
+  assert.equal(out[POLICY].nodes, 2);
+  assert.equal(out[POLICY].market_price, 0.37);
+});
+
+test('keys that are not asset ids are ignored, and no node is no asset', () => {
+  assert.deepEqual(combineFeeInfo([{ bitcoin: { label: 'bitcoin', accepted: true } }]), {});
+  assert.deepEqual(combineFeeInfo([]), {});
 });

@@ -145,7 +145,7 @@ serves the static build plus, on the same origin:
   (the built SWK web wallet, `WALLET_DIR`)
 - node-backed helpers that shell out to `sequentia-cli` on the host (testnet
   faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, how many
-  of the broadcast nodes accept each fee asset at `GET /feeinfo`, how busy the
+  of the broadcast nodes accept each fee asset, and how many list it at all (a node listing it at rate zero refuses it), at `GET /feeinfo`, how busy the
   next block is at `GET /congestion?asset=`, the producer's fee estimate at
   `GET /estimatefee?blocks=&asset=`, anchor
   reads at `GET /anchor/:hash` and `GET /anchorstatus`, and a `POST /api/tx`

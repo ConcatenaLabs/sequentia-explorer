@@ -365,9 +365,9 @@ app.get('/anchorstatus', (req, res) => {
   })
 })
 
-// The two menu pages. The site root is the public front door and lists six
-// things: the explorer, the staking pools, the faucet, the Compages bridge,
-// Emissio and the Sequentia Core download. Everything else the box serves is listed on the
+// The two menu pages. The site root is the public front door and lists seven
+// things: the explorer, the web wallet, the staking pools, the faucet, the
+// Compages bridge, Emissio and the Sequentia Core download. Everything else the box serves is listed on the
 // full menu at /secretfullmenu, which nothing links to: it is for people who
 // have been given the path. The product paths themselves are unchanged, since
 // the wallets, the extension and the nodes carry them hardcoded. One shell
@@ -414,7 +414,7 @@ ${cards.map(([href, title, text]) => `    <a class="card" href="${href}"><h2>${t
 
 const CARD = {
   explorer: ['/explorer/', 'Block Explorer', 'Browse Sequentia blocks, transactions and issued assets (and the Bitcoin testnet4 parent chain).'],
-  wallet: ['/wallet/', 'Web Wallet', 'A self-custodial browser wallet: receive, send any asset, pay fees in any asset, and stake.'],
+  wallet: ['/wallet/', 'Web Wallet', 'A self-custodial browser wallet for Sequentia and Bitcoin testnet4: send and receive any asset on chain or over Lightning, trade on the order book, pay fees in any asset, and stake.'],
   pools: ['/pools/', 'Staking Pools', 'Every block producer on the Sequentia network: the stake lent to it, how reliably it produces, and what it has committed on-chain to paying its delegators. Delegate from any wallet; your coins never move.'],
   dex: ['/dex/', 'SeqDEX', 'The disintermediated exchange of the Sequentia testnet: pure Lightning swaps on the LNDEX, atomic on-chain and covenant orders, a confidential book, and a marketplace for Lightning channel liquidity. Trades are signed by Ambra for Chromium, the browser extension wallet.'],
   faucet: ['/faucet', 'Faucet', 'Free testnet coins: tSEQ and sample assets (USDX, EURX, GOLD, SILVR, OILX), sent straight to any address, from your full node or the Sequentia Core desktop wallet.'],
@@ -429,7 +429,7 @@ const CARD = {
 }
 
 // The public front door.
-const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.pools, CARD.faucet, CARD.bridge, CARD.emissio, CARD.coreDownload] })
+const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.wallet, CARD.pools, CARD.faucet, CARD.bridge, CARD.emissio, CARD.coreDownload] })
 // Every product the box serves, at a path nothing links to. noindex keeps a
 // search engine from turning an unlinked page into a linked one.
 const FULL_MENU_HTML = menuPage({ noindex: true, cards: [

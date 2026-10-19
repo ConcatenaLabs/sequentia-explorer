@@ -146,7 +146,8 @@ serves the static build plus, on the same origin:
 - node-backed helpers that shell out to `sequentia-cli` on the host (testnet
   faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, how many
   of the broadcast nodes accept each fee asset at `GET /feeinfo`, how busy the
-  next block is at `GET /congestion?asset=`, anchor
+  next block is at `GET /congestion?asset=`, the producer's fee estimate at
+  `GET /estimatefee?blocks=&asset=`, anchor
   reads at `GET /anchor/:hash` and `GET /anchorstatus`, and a `POST /api/tx`
   broadcast override that forwards raw transactions to a block producer). These
   default to the production box's node paths; override or ignore them for a

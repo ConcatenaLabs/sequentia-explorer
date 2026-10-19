@@ -315,6 +315,27 @@ app.get('/congestion', (req, res) => {
     })
 })
 
+// The fee rate the producer estimates for confirmation within ?blocks=N (1-1008, default 2),
+// optionally in a fee asset (?asset=<label or hex>): estimatesmartfee, which answers the asset's
+// own atoms per kvB beside the reference rate. Short-cached per target and asset.
+const estimateCache = new Map()
+app.get('/estimatefee', (req, res) => {
+  const blocks = req.query.blocks === undefined ? 2 : Number(req.query.blocks)
+  if (!Number.isInteger(blocks) || blocks < 1 || blocks > 1008) return res.status(400).json({ error: 'blocks must be a whole number from 1 to 1008' })
+  const asset = String(req.query.asset || '')
+  if (asset && !/^([0-9a-fA-F]{64}|[A-Za-z0-9._-]{1,32})$/.test(asset)) return res.status(400).json({ error: 'bad asset' })
+  const key = blocks + ':' + asset
+  const hit = estimateCache.get(key)
+  if (hit && Date.now() - hit.at < 30000) return res.type('json').send(hit.body)
+  execFile(FEERATES_CLI, ['-datadir=' + PRODUCER_DATADIR, 'estimatesmartfee', String(blocks), 'conservative', ...(asset ? [asset] : [])],
+    { timeout: 10000 }, (err, stdout) => {
+      if (err) return res.status(502).json({ error: 'estimate unavailable' })
+      try { JSON.parse(stdout) } catch { return res.status(502).json({ error: 'estimate unreadable' }) }
+      estimateCache.set(key, { at: Date.now(), body: stdout })
+      res.type('json').send(stdout)
+    })
+})
+
 // Anchor read (Sequentia's Bitcoin-anchor view) for the wallet's cross-chain
 // MAKER anchor gate: a secret-holding reverse maker must SELF-DERIVE a Sequentia
 // block's anchor height before revealing its secret (the esplora REST API does

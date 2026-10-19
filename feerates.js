@@ -38,8 +38,10 @@ function intersectAtMinimum(results) {
 }
 
 // What each node we broadcast to says about every fee asset, merged per asset: how many of them
-// accept a fee in it (listed and priced above zero), out of how many were asked. That is the
-// wallet's three-way light: accepted by all, by some, by none. Metadata (label, precision, the
+// accept a fee in it (listed and priced above zero), and how many list it at all, out of how many
+// were asked. That is the wallet's three-way light: accepted by all, by some, by none; and a node
+// that lists an asset at rate zero refuses it on purpose, which the wallet says differently from
+// an asset nobody has configured. Metadata (label, precision, the
 // registry flag, the market price) comes from the first node that reports the asset.
 //
 // `results` is one getfeeassetinfo answer per node, each keyed by asset hex. An asset a node does
@@ -58,9 +60,11 @@ function combineFeeInfo(results) {
         registry_listed: !!info.registry_listed,
         market_price: Number.isFinite(Number(info.market_price)) && Number(info.market_price) > 0 ? Number(info.market_price) : null,
         accepted_by: 0,
+        listed_by: 0,
         nodes,
       })
       if (info.accepted === true) cur.accepted_by += 1
+      if (info.listed === true) cur.listed_by += 1
       if (cur.market_price == null && Number(info.market_price) > 0) cur.market_price = Number(info.market_price)
     }
   }

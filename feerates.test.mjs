@@ -115,9 +115,16 @@ test('feeinfo counts the nodes that accept each asset', () => {
                      [OILX]: info(OILX, { accepted: false }) };
   const out = combineFeeInfo([producer, explorer]);
   assert.deepEqual(out[GOLD], { asset: GOLD, label: 'GOLD', precision: 8, registry_listed: true,
-    market_price: 4000, accepted_by: 2, nodes: 2 });
+    market_price: 4000, accepted_by: 2, listed_by: 2, nodes: 2 });
   assert.equal(out[OILX].accepted_by, 1);      // some: amber
+  assert.equal(out[OILX].listed_by, 2);        // the explorer lists it at rate zero: a refusal on purpose
   assert.equal(out[OILX].market_price, null);  // unquoted
+});
+
+test('listed at rate zero and not listed are told apart', () => {
+  const out = combineFeeInfo([{ [OILX]: info(OILX, { accepted: false }) }, { [GOLD]: info(GOLD) }]);
+  assert.equal(out[OILX].listed_by, 1); assert.equal(out[OILX].accepted_by, 0);
+  assert.equal(out[GOLD].listed_by, 0); assert.equal(out[GOLD].accepted_by, 0);
 });
 
 test('an asset one node does not report counts as not accepted there', () => {

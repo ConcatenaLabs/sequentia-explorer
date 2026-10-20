@@ -118,11 +118,28 @@ mesh does not relay externally submitted transactions on its own). The
 interface is unchanged: the body is the transaction hex, the response is the
 txid.
 
+### Contracts
+
+The Sequentia indexer decodes contract spends and keeps an index from a
+leaf a spend reveals (a Simplicity program's commitment root, or a tapscript
+leaf hash) to the spends that reveal it:
+
+- `GET /tx/:txid/contracts`: each contract input decoded (template and path,
+  cost against budget, witness values by name, terms and state, successors),
+  and each output that carries an input's contract on.
+- `GET /contracts/:leaf_id/spends`: every spend of a root.
+- `GET /contracts/:leaf_id/instance/:params`: one contract instance's spends
+  in order, the state after each, and its unspent coins.
+- `GET /contracts/templates`: the templates the indexer names spends by.
+
+The fields are documented in the
+[sequentia-electrs README](https://github.com/ConcatenaLabs/sequentia-electrs#contracts).
+
 ### Same-origin companion endpoints
 
 The public server exposes a few non-Esplora endpoints on the same origin
 (`/registry/*`, `/prices`, `/feerates`, `/anchor/:hash`, `/anchorstatus`,
-`POST /faucet`). They are part of the deployment, not of this API; see the
+`/faucet`). They are part of the deployment, not of this API; see the
 [repository README](../README.md).
 
 ## Transactions

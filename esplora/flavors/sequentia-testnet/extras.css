@@ -255,3 +255,27 @@ html[data-seq-theme="light"] .navbar-brand { background: var(--seq-dark); }
 }
 .contract-label a { color: inherit; text-decoration: underline; }
 .contract-next { font-size: 0.85em; }
+
+/* Decoded contract inputs (views/contract-parts.js) and the contract pages
+   (views/contract.js). */
+.contract-page-link { font-size: 0.85em; margin-left: 0.3em; }
+.vin-body-row.contract-section > div:first-child { font-weight: 600; padding-top: 0.6em; }
+.vin-body-row.contract-value > div:first-child { padding-left: 1em; }
+.contract-page h2 { margin-top: 1.6em; }
+.contract-page .contract-terms > div { display: flex; gap: 1em; padding: 0.25em 0; border-bottom: 1px solid rgba(127,127,127,0.15); }
+.contract-page .contract-terms > div > div:first-child { flex: 0 0 34%; }
+.contract-page .contract-terms > div > div:last-child { overflow-wrap: anywhere; }
+.contract-chain { margin: 1em 0 1.6em; }
+.contract-spend { border-left: 3px solid rgba(127,127,127,0.35); padding: 0.4em 0 0.4em 0.9em; margin: 0.6em 0; }
+.contract-spend-head { margin: 0.3em 0; overflow-wrap: anywhere; }
+.contract-kv { display: flex; gap: 1em; padding: 0.15em 0; }
+.contract-kv > div:first-child { flex: 0 0 9em; color: #8a8f98; }
+.contract-kv > div:last-child { overflow-wrap: anywhere; min-width: 0; }
+.contract-witness > div { overflow-wrap: anywhere; }
+.contract-current { margin: 0.4em 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .contract-kv, .contract-page .contract-terms > div { flex-direction: column; gap: 0.1em; }
+  .contract-kv > div:first-child, .contract-page .contract-terms > div > div:first-child { flex: none; }
+}
+.contract-page { padding-top: 1.5em; }
+.contract-page .contract-terms > div > div { text-align: left; }

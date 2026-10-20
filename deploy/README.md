@@ -39,16 +39,17 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    returns errors. Every SeqOB relay needs its own mount: an offer is only
    liftable against the relay holding it, so a relay without a mount shows
    up in the merged book and fails to lift.
+   `/faucet` is proxied too (`SEQ_FAUCET`, default `127.0.0.1:9960`), to the
+   faucet service of
+   [`sequentia-faucet`](https://github.com/ConcatenaLabs/sequentia-faucet).
 3. **Node-backed helpers**: `serve-public.js` also shells out to a local
-   `sequentia-cli` for the testnet faucet (`POST /faucet`), fee-asset exchange
+   `sequentia-cli` for fee-asset exchange
    rates (`GET /feerates`), per-node fee-asset acceptance (`GET /feeinfo`), next-block
    congestion (`GET /congestion`, from the producer), fee estimates (`GET /estimatefee`, from the
    producer), anchor reads (`GET /anchor/:hash`,
    `GET /anchorstatus`), and a `POST /api/tx` broadcast override that forwards
    raw transactions to the block producers (the committee mesh does not relay
-   externally submitted transactions). These are configured by `FAUCET_CLI`,
-   `FAUCET_DATADIR`, `FAUCET_WALLET`, `FAUCET_AMOUNT`, `FAUCET_COOLDOWN_MS`
-   (per-address and per-IP cooldown, default one hour), `PRODUCER_DATADIR(S)`,
+   externally submitted transactions). These are configured by `PRODUCER_DATADIR(S)`,
    `BROADCAST_DATADIR`, `BACKSTOP_MAX_ATTEMPTS` (how often the backstop
    re-forwards one transaction before giving up, default 30),
    `FEERATES_CLI`/`FEERATES_DATADIRS` (comma-separated; default = the producer
@@ -61,7 +62,9 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    repo: `run-electrs-supervised.sh` (Sequentia, REST on `:3003`) and
    `run-electrs-testnet4.sh` (Bitcoin testnet4, REST on `:3004`). The frontend
    talks to them only over HTTP, so there is no build-time dependency between
-   the repos.
+   the repos. The Sequentia indexer decodes contract spends; it names them by
+   the registry's verified templates when `CONTRACT_REGISTRY_URL` gives it the
+   registry's base URL, as `concatena-electrs-seq.service` does.
 
 ## Release downloads (`/download`)
 
@@ -82,7 +85,8 @@ if your layout differs:
 
 - `concatena-electrs-seq.service`: the Sequentia electrs under its
   crash-wiping supervisor (`run-electrs-supervised.sh`), with a persistent
-  database at `~/.local/share/concatena-explorer/seq-db`.
+  database at `~/.local/share/concatena-explorer/seq-db`, reading contract
+  templates from the registry at `http://127.0.0.1:3005`.
 - `concatena-electrs-t4.service`: the Bitcoin testnet4 electrs
   (`run-electrs-testnet4.sh`).
 - `concatena-explorer.service`: `serve-public.js` on `:8080`, wanting the two

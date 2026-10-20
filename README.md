@@ -132,7 +132,12 @@ serves the static build plus, on the same origin:
   (`/download/core/`); and the full menu at `/secretfullmenu`, linked from
   nowhere, listing every public service on the domain: the explorer, web
   wallet, staking pool board, SeqDEX, faucet, Emissio rewards, Compages
-  bridge, Pignus lending, Levo launchpad, SeqPal, and the full downloads page
+  bridge, Pignus lending, Levo launchpad, SeqPal, the inbound liquidity page
+  and the full downloads page
+- the inbound liquidity page at `/liquidity` (`liquidity.html`): what the
+  web wallet's room-to-receive service holds, has locked in channels, has
+  earned and has turned away, read in the browser from the LSP's public
+  `/lsp/stats/inbound`; it holds no data of its own
 - API proxies: `/api` -> Sequentia electrs (`SEQ_ELECTRS`, default
   `127.0.0.1:3003`), `/testnet4/api` -> testnet4 electrs (`T4_ELECTRS`,
   default `127.0.0.1:3004`)
@@ -177,6 +182,8 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 - `serve-public.js` - the production static+proxy server (Express 4).
 - `feerates.js` - the fee-asset helpers behind `GET /feerates` and
   `GET /feeinfo`, with their own suite in `feerates.test.mjs`.
+- `liquidity-page.test.mjs` - the `/liquidity` page: its route, its menu card,
+  and that it renders the LSP's figures as text
 - `contract-labels.test.mjs` - the contract labels
   (`esplora/client/src/lib/contracts.js`) on a drip and its funding
   transaction recorded from a regtest chain (`test/fixtures/`);
@@ -227,7 +234,7 @@ Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
 The tests:
 
 ```sh
-node --test feerates.test.mjs contract-labels.test.mjs
+node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
 ```

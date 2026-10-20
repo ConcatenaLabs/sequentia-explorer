@@ -425,6 +425,7 @@ const CARD = {
   seqpal: ['/seqpal/', 'SeqPal Issuance', 'Tokenize and service compliant securities on Sequentia: structure an offering, issue a restricted asset whose transfer rules the policy server enforces at co-sign, and run the transfer-agent lifecycle. A proof of concept.'],
   seqpalId: ['/seqpal/id', 'SeqPal ID', 'One verified identity for issuing and holding SeqPal-managed restricted assets: create a SeqPal ID, carry your eligibility categories, and use them wherever these assets are accepted.'],
   downloads: ['/download/', 'Downloads', 'Sequentia Core, the full node and desktop wallet, and Fulmen, a SeqLN Lightning node with a desktop GUI, both for Linux and Windows. Ambra, the dual-chain Bitcoin and Sequentia wallet, for Android and for Chromium.'],
+  liquidity: ['/liquidity', 'Inbound Liquidity', 'The coins the room-to-receive service lends to wallets so they can receive over Lightning: what is free to sell, what is locked in channels, what it has earned, and the demand it turned away.'],
   coreDownload: ['/download/core/', 'Download Sequentia Core', 'The full node and desktop wallet, for Linux and Windows. It validates the chain for itself and is the software a block producer runs.'],
 }
 
@@ -434,11 +435,14 @@ const ROOT_HTML = menuPage({ cards: [CARD.explorer, CARD.wallet, CARD.pools, CAR
 // search engine from turning an unlinked page into a linked one.
 const FULL_MENU_HTML = menuPage({ noindex: true, cards: [
   CARD.explorer, CARD.wallet, CARD.pools, CARD.dex, CARD.faucet, CARD.emissio, CARD.bridge,
-  CARD.lending, CARD.levo, CARD.seqpal, CARD.seqpalId, CARD.downloads,
+  CARD.lending, CARD.levo, CARD.seqpal, CARD.seqpalId, CARD.liquidity, CARD.downloads,
 ] })
 
 app.get('/', (req, res) => res.type('html').send(ROOT_HTML))
 app.get('/secretfullmenu', (req, res) => res.type('html').send(FULL_MENU_HTML))
+// The room-to-receive service's public figures. The page is static and reads them from the LSP's
+// /stats/inbound (behind /lsp/ on the box), so it holds no data of its own.
+app.get('/liquidity', (req, res) => res.sendFile(path.join(__dirname, 'liquidity.html')))
 
 
 // Static assets (serves dist/explorer/**, dist/testnet4/**). express.static itself redirects the

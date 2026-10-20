@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inbound liquidity · Sequentia testnet</title>
+<link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
+<style>
+:root{color-scheme:dark;--bg:#0f1216;--panel:#171b21;--line:#262b33;--ink:#e8eaed;--ink2:#9aa0a6;--ink3:#6b7280;--accent:#f5b301;
+  --free:#4f8fd6;--ok:#3fb26b;--warn:#e0a020;--crit:#e5534b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:36px 16px 60px}
+h1{font-size:28px;margin:0} h1 .t{color:var(--accent)}
+.sub{color:var(--ink2);margin:4px 0 22px}
+h2{font-size:17px;margin:34px 0 4px} .h2sub{color:var(--ink3);font-size:13px;margin:0 0 12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .l{font-size:12.5px;color:var(--ink2)} .kpi .v{font-size:26px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:12.5px;color:var(--ink3)}
+.alert{display:flex;gap:10px;align-items:flex-start;border-radius:10px;padding:12px 14px;margin:18px 0 0;border:1px solid #5a2626;background:#1f1415}
+.alert b{color:#f0a1a1}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:14px}
+th{text-align:right;font-weight:500;color:var(--ink2);font-size:12.5px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{text-align:right;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td .u{color:var(--ink3);font-size:12.5px;display:block}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.util{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.bar{width:90px;height:8px;border-radius:4px;background:var(--free);overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--accent)}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--ink2);margin-top:10px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:8px;border-radius:2px;display:inline-block}
+.grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media (max-width:760px){.grid2{grid-template-columns:1fr}}
+.chart{position:relative} .chart svg{width:100%;height:auto;display:block}
+.tip{position:absolute;pointer-events:none;background:#0b0d10;border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12.5px;display:none;white-space:nowrap}
+.small{font-size:13px;color:var(--ink2)}
+.empty{color:var(--ink3);font-size:14px;padding:6px 0}
+footer{margin-top:28px;color:var(--ink3);font-size:13px}
+a{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Inbound <span class="t">liquidity</span></h1>
+  <p class="sub">The coins the service lends to wallets so they can receive over Lightning: what is free to sell, what is locked in channels, and what it has earned. Values in <span class="ccy">USD</span> at the node's reference prices · <span id="upd">loading…</span> · refreshes every minute</p>
+
+  <div id="err" class="alert" style="display:none"><span>⚠</span><div>The service's figures cannot be read right now. This page tries again every minute.</div></div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Free to sell</div><div class="v" id="kFree">–</div><div class="s" id="kFreeS"></div></div>
+    <div class="kpi"><div class="l">Locked in sold channels</div><div class="v" id="kLocked">–</div><div class="s" id="kLockedS"></div></div>
+    <div class="kpi"><div class="l">Utilization</div><div class="v" id="kUtil">–</div><div class="s">locked ÷ (locked + free)</div></div>
+    <div class="kpi"><div class="l">Fees earned, 30 days</div><div class="v" id="kFees">–</div><div class="s" id="kFeesS"></div></div>
+  </div>
+  <div id="alerts"></div>
+
+  <h2>Stock by asset</h2>
+  <p class="h2sub" id="stockSub">"Sellable now" is the largest room the service can open in one channel: free coins, less the headroom and reserve each channel needs.</p>
+  <div class="panel tablewrap">
+    <table>
+      <thead><tr><th>Asset</th><th>Status</th><th>Free</th><th>Sellable now</th><th>Locked in channels</th><th>Channels</th><th>Expiring ≤30d</th><th>Utilization</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <h2>Earnings</h2>
+  <p class="h2sub">Fees collected per day over the last 30 days, all assets, at the price on the day of each sale.</p>
+  <div class="grid2">
+    <div class="panel chart" id="feechart"><div class="tip" id="tip"></div></div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Asset</th><th>Purchases</th><th>Fees</th><th>Yield on locked</th></tr></thead>
+        <tbody id="earn"></tbody>
+      </table>
+      <p class="small" style="margin:10px 0 0" id="earnNote"></p>
+    </div>
+  </div>
+
+  <h2>Demand the service turned away</h2>
+  <p class="h2sub">Purchases refused for lack of stock in the last 7 days: where to restock first.</p>
+  <div class="panel tablewrap" id="refusedBox"></div>
+
+  <h2>Price list</h2>
+  <p class="h2sub" id="priceSub"></p>
+  <div class="panel tablewrap">
+    <table><thead id="priceHead"></thead><tbody id="price"></tbody></table>
+    <p class="small" style="margin:10px 0 0">Each cell: the fee, and the yearly yield it gives the service on the coins it locks.</p>
+  </div>
+
+  <footer>Aggregates only: no node, channel or wallet is identified on this page. Data: <a href="/lsp/stats/inbound"><code>/lsp/stats/inbound</code></a> (JSON). <a href="/">← Sequentia testnet</a></footer>
+</div>
+
+<script>
+// Everything shown comes from the service's own public figures (GET /lsp/stats/inbound). Asset
+// names come from the node's labels: they are set as text, never as markup.
+const $ = (id) => document.getElementById(id);
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; };
+const fmt = (n, d = 2) => Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const money = (n) => n == null ? '–' : '$' + (Math.abs(n) >= 100 ? fmt(n, 0) : fmt(n, 2));
+const pct = (x, d = 1) => x == null ? '–' : fmt(x * 100, d) + '%';
+const qty = (atoms, priceRef) => { const n = Number(atoms) / 1e8; return n >= 1000 ? fmt(n, 0) : n >= 1 ? fmt(n, 2) : fmt(n, 4); };
+const STATUS = { ok: ['var(--ok)', 'OK'], low: ['var(--warn)', 'Low'], out: ['var(--crit)', 'Out'], unpriced: ['var(--ink3)', 'No price'] };
+// A yield on a few dollars locked means nothing (one $1 fee on $0.90 reads 1,333%).
+const YIELD_MIN_LOCKED = 100;
+const cell = (main, under) => { const td = el('td', main); if (under) td.appendChild(el('span', under, 'u')); return td; };
+
+function render(s) {
+  const t = s.totals, terms = s.terms;
+  $('upd').textContent = 'updated ' + new Date(s.at).toUTCString().replace(/:\d\d GMT/, ' UTC');
+  $('kFree').textContent = money(t.free_ref); $('kFreeS').textContent = 'confirmed coins at the service, ' + s.assets.length + ' assets';
+  $('kLocked').textContent = money(t.locked_ref); $('kLockedS').textContent = t.channels + ' channel' + (t.channels === 1 ? '' : 's') + ' open toward wallets';
+  $('kUtil').textContent = pct(t.utilization);
+  $('kFees').textContent = money(t.fees_30d_ref);
+  $('kFeesS').textContent = t.purchases_30d + ' purchase' + (t.purchases_30d === 1 ? '' : 's') + ' · all time ' + money(t.fees_ref);
+
+  // Alerts: out of stock first, then low.
+  const alerts = $('alerts'); alerts.textContent = '';
+  const out = s.assets.filter((a) => a.status === 'out'), low = s.assets.filter((a) => a.status === 'low');
+  if (out.length || low.length) {
+    const box = el('div', null, 'alert'); box.appendChild(el('span', out.length ? '⛔' : '⚠'));
+    const d = el('div');
+    if (out.length) d.appendChild(el('b', out.map((a) => a.ticker).join(', ') + (out.length === 1 ? ' is' : ' are') + ' out of stock.'));
+    if (out.length) d.appendChild(document.createTextNode(' The service holds less than the smallest room it sells (' + money(terms.min_room_ref) + ' plus headroom). Purchases are refused. '));
+    if (low.length) d.appendChild(el('span', 'Low: ' + low.map((a) => a.ticker).join(', ') + ' (under ' + money(terms.low_ref) + ' sellable each).', 'small'));
+    box.appendChild(d); alerts.appendChild(box);
+  }
+
+  $('stockSub').textContent = '"Sellable now" is the largest room the service can open in one channel: free coins, less the '
+    + fmt(terms.headroom_bps / 100, 0) + '% headroom and reserve each channel needs. One room is never larger than ' + money(terms.max_room_ref) + '.';
+  const rows = $('rows'); rows.textContent = '';
+  for (const a of s.assets) {
+    const tr = el('tr');
+    const name = el('td'); name.appendChild(el('b', a.ticker)); name.appendChild(el('span', a.price_ref ? '$' + fmt(a.price_ref, a.price_ref < 10 ? 4 : 2) : 'no price', 'u')); tr.appendChild(name);
+    const [color, word] = STATUS[a.status] || STATUS.unpriced;
+    const st = el('td'); const sp = el('span', null, 'st'); const dot = el('i', null, 'dot'); dot.style.background = color; sp.appendChild(dot); sp.appendChild(document.createTextNode(word)); st.appendChild(sp); tr.appendChild(st);
+    tr.appendChild(cell(qty(a.free_atoms), money(a.free_ref)));
+    const under = a.sellable_ref == null ? '' : a.sellable_ref < terms.min_room_ref ? 'below the ' + money(terms.min_room_ref) + ' minimum'
+      : money(Math.min(a.sellable_ref, terms.max_room_ref)) + (a.sellable_ref > terms.max_room_ref ? ' per room' : '');
+    tr.appendChild(cell(a.status === 'out' ? '—' : qty(a.sellable_atoms), under));
+    tr.appendChild(cell(qty(a.locked_atoms), money(a.locked_ref)));
+    tr.appendChild(el('td', String(a.channels)));
+    tr.appendChild(el('td', String(a.expiring_30d)));
+    const ut = el('td'); const u = el('div', null, 'util'); u.appendChild(el('span', pct(a.utilization)));
+    const bar = el('div', null, 'bar'); bar.title = pct(a.utilization) + ' locked'; const fill = el('i'); fill.style.width = Math.max(a.utilization * 100, 1) + '%'; bar.appendChild(fill); u.appendChild(bar); ut.appendChild(u); tr.appendChild(ut);
+    rows.appendChild(tr);
+  }
+  const lg = $('legend'); lg.textContent = '';
+  const key = (bg, text, dot) => { const sp = el('span'); const i = el('i', null, dot ? 'dot' : 'sw'); i.style.background = bg; sp.appendChild(i); sp.appendChild(document.createTextNode(text)); lg.appendChild(sp); };
+  key('var(--accent)', 'Locked (sold)'); key('var(--free)', 'Free');
+  key('var(--ok)', 'OK: ≥ ' + money(terms.low_ref) + ' sellable', true); key('var(--warn)', 'Low: ' + money(terms.min_room_ref) + '–' + money(terms.low_ref), true); key('var(--crit)', 'Out: under ' + money(terms.min_room_ref) + ', nothing sells', true);
+
+  // Earnings
+  const earn = $('earn'); earn.textContent = '';
+  const sold = s.assets.filter((a) => a.purchases > 0).sort((x, y) => y.fees_ref - x.fees_ref);
+  if (!sold.length) { const tr = el('tr'); const td = el('td', 'No sales yet.', 'empty'); td.colSpan = 4; tr.appendChild(td); earn.appendChild(tr); }
+  for (const a of sold) { const tr = el('tr'); tr.appendChild(el('td', a.ticker)); tr.appendChild(el('td', String(a.purchases))); tr.appendChild(el('td', money(a.fees_ref))); tr.appendChild(el('td', a.yield_on_locked == null || !(a.locked_ref >= YIELD_MIN_LOCKED) ? '—' : pct(a.yield_on_locked))); earn.appendChild(tr); }
+  if (sold.length) { const tr = el('tr'); for (const v of ['Total', String(t.purchases), money(t.fees_ref), '']) { const td = el('td'); td.appendChild(el('b', v)); tr.appendChild(td); } earn.appendChild(tr); }
+  $('earnNote').textContent = 'Yield on locked = fees of the last 30 days × 12 ÷ value locked now; “—” under ' + money(YIELD_MIN_LOCKED) + ' locked, where it means nothing. Yield on all capital (free included): '
+    + pct(t.yield_on_all_capital) + '. Deferred fees still owed: ' + money(t.debts_open_ref) + '.';
+  chart(s.fees_by_day);
+
+  // Demand turned away
+  const rb = $('refusedBox'); rb.textContent = '';
+  const refused = s.assets.filter((a) => a.refused_7d && a.refused_7d.refused > 0);
+  if (!refused.length) rb.appendChild(el('div', 'Nothing was turned away in the last 7 days.', 'empty'));
+  else {
+    const tb = el('table'); const th = el('thead'); const hr = el('tr');
+    for (const h of ['Asset', 'Refused', 'Room asked', 'Largest single ask']) hr.appendChild(el('th', h));
+    th.appendChild(hr); tb.appendChild(th); const body = el('tbody');
+    for (const a of refused.sort((x, y) => y.refused_7d.room_ref - x.refused_7d.room_ref)) {
+      const tr = el('tr'); tr.appendChild(el('td', a.ticker)); tr.appendChild(el('td', String(a.refused_7d.refused)));
+      tr.appendChild(el('td', money(a.refused_7d.room_ref))); tr.appendChild(el('td', money(a.refused_7d.largest_ref))); body.appendChild(tr);
+    }
+    tb.appendChild(body); rb.appendChild(tb);
+  }
+
+  // Price list
+  $('priceSub').textContent = 'fee = max(' + money(terms.fee_floor_ref) + ', room × yearly rate × months ÷ 12) · yearly rate '
+    + fmt(terms.default_annual_bps / 100, 1).replace(/\.0$/, '') + '% unless set for an asset · rooms from ' + money(terms.min_room_ref) + ' to ' + money(terms.max_room_ref)
+    + ' · ' + terms.months.join(', ') + ' months. The ' + money(terms.fee_floor_ref) + ' floor sets the price of most small or short rooms:';
+  const ph = $('priceHead'); ph.textContent = ''; const phr = el('tr'); phr.appendChild(el('th', 'Room'));
+  for (const m of terms.months) phr.appendChild(el('th', m + (m === 1 ? ' month' : ' months'))); ph.appendChild(phr);
+  const pb = $('price'); pb.textContent = '';
+  for (const r of s.price_list) {
+    const tr = el('tr'); tr.appendChild(el('td', money(r.room_ref)));
+    for (const c of r.by_months) tr.appendChild(cell(money(c.fee_ref), fmt(c.yearly_yield * 100, c.yearly_yield < 0.1 ? 1 : 0) + '% a year'));
+    pb.appendChild(tr);
+  }
+}
+
+function chart(days) {
+  const box = $('feechart'); box.querySelectorAll('svg,.empty').forEach((n) => n.remove());
+  const W = 560, H = 220, L = 40, R = 8, T = 12, B = 26;
+  const top = Math.max(1, ...days.map((d) => d.fee_ref));
+  const step = top <= 5 ? 1 : Math.pow(10, Math.floor(Math.log10(top)));
+  const max = Math.ceil(top / step) * step, bw = (W - L - R) / days.length;
+  const y = (v) => T + (H - T - B) * (1 - v / max);
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Fees per day, last 30 days');
+  const add = (tag, attrs, text) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (text != null) n.textContent = text; svg.appendChild(n); return n; };
+  for (let g = 0; g <= max + 1e-9; g += step) {
+    add('line', { x1: L, x2: W - R, y1: y(g), y2: y(g), stroke: '#262b33' });
+    add('text', { x: L - 6, y: y(g) + 4, fill: '#6b7280', 'font-size': 11, 'text-anchor': 'end' }, '$' + (step < 1 ? fmt(g, 2) : fmt(g, 0)));
+  }
+  const tip = $('tip');
+  days.forEach((d, i) => {
+    const x = L + i * bw + 1, h = y(0) - y(d.fee_ref);
+    if (d.fee_ref > 0) add('rect', { x, y: y(d.fee_ref), width: Math.max(1, bw - 2), height: Math.max(1, h), rx: 3, fill: '#f5b301' });
+    const hit = add('rect', { x: L + i * bw, y: T, width: bw, height: H - T - B, fill: 'transparent' });
+    const label = new Date(d.day + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+    if (i % 7 === 1) add('text', { x: x + bw / 2 - 1, y: H - 8, fill: '#6b7280', 'font-size': 11, 'text-anchor': 'middle' }, label);
+    hit.addEventListener('mouseenter', () => { tip.textContent = label + ' · ' + money(d.fee_ref); tip.style.display = 'block'; });
+    hit.addEventListener('mousemove', (e) => { const b = box.getBoundingClientRect(); tip.style.left = (e.clientX - b.left + 12) + 'px'; tip.style.top = (e.clientY - b.top - 30) + 'px'; });
+    hit.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+  box.appendChild(svg);
+  if (!days.some((d) => d.fee_ref > 0)) box.appendChild(el('div', 'No fees in the last 30 days.', 'empty'));
+}
+
+async function load() {
+  try {
+    const r = await fetch('/lsp/stats/inbound', { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const s = await r.json();
+    if (!s || !s.ok) throw new Error('bad answer');
+    $('err').style.display = 'none';
+    render(s);
+  } catch { $('err').style.display = ''; }
+}
+load();
+setInterval(load, 60_000);
+</script>
+</body>
+</html>

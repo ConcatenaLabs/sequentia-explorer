@@ -26,7 +26,7 @@ node serve-public.js            # default :8080
 automated tests are:
 
 ```sh
-node --test feerates.test.mjs contract-labels.test.mjs
+node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 ```
 
 `feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `contract-labels.test.mjs`

@@ -18,9 +18,9 @@
 // in a temporary directory, removed at the end, and every process it starts is
 // stopped.
 //
-// The chain's coins come from a block subsidy rather than initialfreecoins:
-// sequentia-electrs cannot read the issuance that initialfreecoins puts in a
-// custom chain's genesis block (it stops on InvalidConfidentialPrefix(178)).
+// ELECTRS is sequentia-electrs built with `--features sequentia`. The chain is
+// started without -con_bitcoin_anchor, so its block headers carry no Bitcoin
+// anchor and electrs runs with --no-bitcoin-anchor.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
@@ -64,8 +64,10 @@ async function render (url, selector, dir) {
       proc.stderr.on('data', d => { err += d; const m = err.match(/DevTools listening on (ws:\/\/\S+)/); if (m) resolve(m[1]) })
       proc.once('exit', c => reject(new Error('chrome exited ' + c)))
     })
-    const pages = await (await fetch(`http://127.0.0.1:${new URL(wsUrl).port}/json/list`)).json()
-    const ws = new WebSocket(pages.find(p => p.type === 'page').webSocketDebuggerUrl)
+    // Chromium lists its first page a moment after it starts listening.
+    const page = await until('a Chromium page', async () =>
+      (await (await fetch(`http://127.0.0.1:${new URL(wsUrl).port}/json/list`)).json()).find(p => p.type === 'page'), 10000)
+    const ws = new WebSocket(page.webSocketDebuggerUrl)
     await new Promise(r => ws.addEventListener('open', r, { once: true }))
     let id = 0
     const waiting = new Map()
@@ -161,7 +163,7 @@ test('the explorer labels a drip and follows the covenant from drip to drip', { 
 
   // The indexer.
   const api = `http://127.0.0.1:${http}`
-  daemon('electrs', E.ELECTRS, ['--network', 'liquidregtest', '--parent-network', 'regtest',
+  daemon('electrs', E.ELECTRS, ['--network', 'liquidregtest', '--parent-network', 'regtest', '--no-bitcoin-anchor',
     '--daemon-dir', path.join(datadir, 'elementsregtest'), '--daemon-rpc-addr', `127.0.0.1:${rpc}`, '--cookie', 'local:local',
     '--jsonrpc-import', '--db-dir', path.join(dir, 'electrs-db'), '--http-addr', `127.0.0.1:${http}`,
     '--electrum-rpc-addr', `127.0.0.1:${electrum}`, '--monitoring-addr', `127.0.0.1:${monitoring}`])

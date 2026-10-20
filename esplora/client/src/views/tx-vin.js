@@ -2,11 +2,8 @@ import { linkToParentOut, formatOutAmount, formatAssetAmount, formatHex, linkToA
 import { isSimplicitySpend, getSimplicityWitness } from '../lib/elements.js'
 import { contractName } from '../lib/contracts'
 
-// The registry's record of a template, beside its contract index.
-const contractBase = (process.env.CONTRACT_MAP_URL || '').replace(/\/index\.minimal\.json$/, '')
-export const contractLink = (c, text) => contractBase && c.template_hash
-  ? <a href={`${contractBase}/${c.template_hash}`} target="_blank" rel="external">{text}</a>
-  : text
+import { contractLink, decodedBadge, decodedInputRows } from './contract-parts'
+export { contractLink }
 
 // Under an input or output's header: the contract it belongs to.
 export const contractBadge = (c, what) => c &&
@@ -45,17 +42,26 @@ const pegin = (vin, { isOpen, t, ...S }) => layout(
 
 const getAssetMeta = (vin, S) => vin.issuance && vin.issuance.asset_id && S.assetMap && S.assetMap[vin.issuance.asset_id]
 
-const standard = (vin, { isOpen, t, contract, ...S }, assetMeta=getAssetMeta(vin, S)) => layout(
+// SEQUENTIA: `decoded` is what sequentia-electrs read of a script-path spend
+// (GET /tx/:txid/contracts); where it names a contract it replaces the label
+// taken from the registry's index alone.
+const standard = (vin, { isOpen, t, contract, decoded, ...S }, assetMeta=getAssetMeta(vin, S)) => layout(
   vin
 
 , vin.is_coinbase
     ? t`Coinbase`
     : [ <a href={`tx/${vin.txid}?output:${vin.vout}`}>{`${vin.txid}:${vin.vout}`}</a>
-      , contract && <br/>
-      , contractBadge(contract, contract && contract.path ? `${contract.path} ·` : t`Contract`) ]
+      , (contract || decodedBadge(decoded, t)) && <br/>
+      // a template electrs named first, then the registry index's label, and
+      // only then electrs' reading of a program no template it holds names
+      , decoded && decoded.template ? decodedBadge(decoded, t)
+        : contract ? contractBadge(contract, contract.path ? `${contract.path} ·` : t`Contract`)
+        : decodedBadge(decoded, t) ]
 
 , isOpen && <div className="vin-body">
-    { contract && [
+    { decoded && decodedInputRows(decoded, { t, ...S }) }
+
+    { contract && !(decoded && decoded.template) && [
       <div className="vin-body-row">
         <div>{t`Contract`}</div>
         <div>{contract.candidates

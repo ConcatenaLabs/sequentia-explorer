@@ -54,13 +54,15 @@ export default ({ t, tx, tipHeight, spends, openTx, page, unblinded, ...S }) => 
 const confirmationText = (status, tipHeight, t) =>
   !status.confirmed ? t`Unconfirmed` : tipHeight ? t`${tipHeight - status.block_height + 1} Confirmations` : t`Confirmed`
 
-export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S }) => {
+export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, txContracts, ...S }) => {
   const vopt = { isOpen: (openTx == tx.txid), query, t, ...S }
 
   // Try deducing unknown blinded ins/outs (elements only)
   if (process.env.IS_ELEMENTS) deduceBlinded(tx)
 
   // The contract each input spends and each output continues, by the registry's index
+  // SEQUENTIA: and what the indexer decoded of them, on this transaction's page
+  const decoded = txContracts && txContracts.txid == tx.txid ? txContracts : null
   const contractIns = contractInputs(tx, S.contractMap)
       , contractOuts = contractOutputs(tx, S.contractMap, contractIns)
 
@@ -70,7 +72,7 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S
       {btnDetails(tx.txid, vopt.isOpen, query, t)}
     </div>
     <div className="ins-and-outs">
-      <div className="vins">{tx.vin.map((vin, index) => vinView(vin, { ...vopt, index, contract: contractIns[index] }))}</div>
+      <div className="vins">{tx.vin.map((vin, index) => vinView(vin, { ...vopt, index, contract: contractIns[index], decoded: decoded && decoded.inputs[index] }))}</div>
 
 
       <div className="ins-and-outs_spacer">
@@ -81,7 +83,7 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, ...S
 
 
       <div className="vouts">{tx.vout.map((out, index) =>
-        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index), contract: contractOuts[index] }))}
+        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index), contract: contractOuts[index], decoded: decoded && decoded.outputs[index] }))}
       </div>
     </div>
     <div className="footer">

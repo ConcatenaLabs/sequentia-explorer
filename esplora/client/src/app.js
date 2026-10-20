@@ -100,6 +100,11 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   , goMempool$= route('/mempool')
   , goSearch$ = route('/search').map(loc => loc.query.q).filter(Boolean)
 
+  // SEQUENTIA: a contract instance (its commitment root and its parameters),
+  // and every spend of one commitment root
+  , goContract$ = route('/contract/:leaf/:instance').map(loc => loc.params).filter(p => isHash256(p.leaf) && /^[0-9a-f]+$/.test(p.instance))
+  , goContractRoot$ = route('/contract/:leaf').map(loc => loc.params.leaf).filter(isHash256)
+
   // Elements only
   , goAsset$ = !process.env.IS_ELEMENTS ? O.empty() : route('/asset/:asset_id').map(loc => ({
       asset_id: loc.params.asset_id
@@ -222,6 +227,15 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   // Single TX
   , tx$ = reply('tx').merge(goTx$.mapTo(null)).startWith(null)
 
+  // SEQUENTIA: the indexer's reading of a transaction's contract inputs and
+  // outputs (GET /tx/:txid/contracts); null until it answers, and when it
+  // cannot (an indexer without the contract decoder)
+  , txContracts$ = reply('tx-contracts').merge(goTx$.mapTo(null)).startWith(null)
+
+  // SEQUENTIA: a contract instance's page, and a commitment root's spends
+  , contract$ = reply('contract').merge(goContract$.mapTo(null))
+  , contractRoot$ = reply('contract-root').merge(goContractRoot$.mapTo(null))
+
   // Currently collapsed tx/block ("details")
   , openTx$ = togTx$.startWith(null).scan((prev, txid) => prev == txid ? null : txid)
   , openBlock$ = togBlock$.startWith(null).scan((prev, blockhash) => prev == blockhash ? null : blockhash)
@@ -307,6 +321,8 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                   , tx$.filter(notNully).mapTo('tx')
                   , addr$.filter(notNully).mapTo('addr')
                   , asset$.filter(notNully).mapTo('asset')
+                  , contract$.filter(notNully).mapTo('contract')
+                  , contractRoot$.filter(notNully).mapTo('contractRoot')
                   , goPush$.mapTo('pushtx')
                   , goScan$.mapTo('scan')
                   , goSettings$.mapTo('settings')
@@ -323,6 +339,8 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                    , tx$.filter(notNully).withLatestFrom(t$, (tx, t) => t`Transaction: ${tx.txid}`)
                    , addr$.filter(notNully).withLatestFrom(goAddr$, t$, (_, goAddr, t) => t`Address: ${goAddr.display_addr}`)
                    , asset$.filter(notNully).withLatestFrom(t$, (asset, t) => t`Asset: ${asset.asset_id}`)
+                   , contract$.filter(notNully).withLatestFrom(t$, (c, t) => t`Contract: ${c.template ? c.template.name : c.leaf_id}`)
+                   , contractRoot$.filter(notNully).withLatestFrom(t$, (c, t) => t`Commitment root: ${c.leaf_id}`)
                    , goAssetList$.withLatestFrom(t$, (_, t) => t`Registered assets`)
                    , goPush$.withLatestFrom(t$, (_, t) => t`Broadcast transaction`)
                    , goMempool$.withLatestFrom(t$, (_, t) => t`Mempool`)
@@ -335,7 +353,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , newBlockEntries$, newTxEntries$
                      , goBlock$, block$, blockStatus$, blockTxs$, nextBlockTxs$, prevBlockTxs$, openBlock$
                      , mempool$, mempoolRecent$, feeEst$
-                     , tx$, txAnalysis$, openTx$
+                     , tx$, txAnalysis$, openTx$, txContracts$, contract$, contractRoot$
                      , goAddr$, addr$, addrTxs$, addrQR$
                      , assetMap$, contractMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
@@ -362,6 +380,13 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
     // fetch single tx (including confirmation status)
     , goTx$.map(txid        => ({ category: 'tx',         method: 'GET', path: `/tx/${txid}` }))
+
+    // SEQUENTIA: and its contract inputs decoded, in the background
+    , goTx$.map(txid        => ({ category: 'tx-contracts', method: 'GET', path: `/tx/${txid}/contracts`, bg: true }))
+
+    // SEQUENTIA: a contract instance, and a commitment root's spends
+    , goContract$.map(p     => ({ category: 'contract',   method: 'GET', path: `/contracts/${p.leaf}/instance/${p.instance}` }))
+    , goContractRoot$.map(l => ({ category: 'contract-root', method: 'GET', path: `/contracts/${l}/spends` }))
 
     // fetch address and its txs
     , goAddr$.flatMap(d     => [{ category: 'address',    method: 'GET', path: `/address/${d.addr}` }
@@ -392,8 +417,8 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
     // SEQUENTIA: and for a transaction with an output that holds a contract,
     // so its header links to the contract's next spend without opening details
-    , O.combineLatest(tx$.filter(notNully), contractMap$)
-        .filter(([ tx, map ]) => contractOutputs(tx, map).some(Boolean))
+    , O.combineLatest(tx$.filter(notNully), contractMap$, txContracts$.startWith(null))
+        .filter(([ tx, map, dec ]) => contractOutputs(tx, map).some(Boolean) || (dec && dec.txid == tx.txid && dec.outputs.some(Boolean)))
         .distinctUntilChanged(([ a ], [ b ]) => a === b)
         .map(([ tx ])       => ({ category: 'tx-spends',  method: 'GET', path: `/tx/${tx.txid}/outspends`, txid: tx.txid, bg: true }))
 

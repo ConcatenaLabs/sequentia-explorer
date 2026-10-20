@@ -1,5 +1,6 @@
 import { formatOutAmount, linkToAddr, linkToParentAddr, formatNumber } from './util'
 import { contractBadge } from './tx-vin'
+import { decodedOutputBadge, contractHref } from './contract-parts'
 
 const unspendable_types = [ 'op_return', 'provably_unspendable', 'fee' ]
 
@@ -28,23 +29,26 @@ const isUnblinded = vout => vout.value != null
 // An output that holds a contract: the next state of a contract an input spent,
 // or a registered instance. Its header links to the transaction that spends it,
 // so a contract can be followed from one spend to the next.
-const contractHeader = (contract, spend, t) => contract && [
+// `decoded` is sequentia-electrs' reading of the output as an input's
+// successor, with the state it holds.
+const contractHeader = (contract, spend, t, decoded, S) => (contract || decoded) && [
   <br/>
-, contractBadge(contract, contract.successor_of != null ? t`Next state of input #${contract.successor_of} ·` : t`Contract`)
+, decoded ? decodedOutputBadge(decoded, t, S) : contractBadge(contract, contract.successor_of != null ? t`Next state of input #${contract.successor_of} ·` : t`Contract`)
+, decoded && contractHref(decoded) && <span>{' '}<a href={contractHref(decoded)} className="contract-page-link">{t`contract`} &rarr;</a></span>
 , spend && <span className="contract-next">{' '}{
     spend.spent ? <a href={`tx/${spend.txid}?input:${spend.vin}`} className="contract-next-spend">{t`next spend`} &rarr;</a>
                 : t`unspent`
   }</span>
 ]
 
-const standard = (vout, { isOpen, spend, t, contract, ...S }) => layout(
+const standard = (vout, { isOpen, spend, t, contract, decoded, ...S }) => layout(
   vout
 
 , [ vout.pegout ? (vout.pegout.scriptpubkey_address ? <span>{t`Peg-out to`}<br/>{linkToParentAddr(vout.pegout.scriptpubkey_address)}</span> : t`Peg-out`)
   : vout.scriptpubkey_address ? linkToAddr(vout.scriptpubkey_address)
   : vout.scriptpubkey_type ? vout.scriptpubkey_type.toUpperCase()
   : t`Nonstandard`
-  , contractHeader(contract, spend, t) ]
+  , contractHeader(contract, spend, t, decoded, S) ]
 
 , isOpen && <div className="vout-body">
     { vout.scriptpubkey_type &&

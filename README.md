@@ -57,15 +57,28 @@ details, mempool), plus Sequentia-specific views:
   issuance, supply, and transactions. Asset names, tickers, and display
   precision come from the Sequentia Asset Registry (`ASSET_MAP_URL`, served
   same-origin at `/registry/index.minimal.json`).
-- **Contracts.** A Simplicity spend is labelled with its template's name and
+- **Contracts.** A contract spend is labelled with its template's name and
   spending path (for example `drip · sequentia/faucet-drip v1`), linked to the
-  template's record in the registry, when the registry has verified a template
-  with that commitment root (`CONTRACT_MAP_URL`, served same-origin at
-  `/registry/contracts/index.minimal.json`). An output that continues the
-  contract an input spent is labelled as its next state, and an output paying a
-  registered instance as that contract; either links in its header to the
-  transaction that spends it next, so a contract such as the faucet's reserve
-  can be followed from one spend to the next without opening details.
+  template's record in the registry. The indexer decodes each contract input
+  (`GET /api/tx/:txid/contracts`): its details show the program's cost against
+  its budget (with any annex padding), the witness values by the names the
+  template's descriptor gives them, and the contract's terms and state read
+  from its data leaf by name and role (an asset by its id and ticker, a time as
+  a date, a relative lock as its delay). An output that continues the contract
+  carries the state it now holds, and links to the transaction that spends it
+  next. A contract is named only by the registry's verified templates, and
+  only when the template and the values the spend reveals recompute the very
+  script it spends; a spend no template names shows its commitment root and
+  its witness values unnamed. Where the indexer has no decoder, the label comes
+  from the registry's contract index alone (`CONTRACT_MAP_URL`, served
+  same-origin at `/registry/contracts/index.minimal.json`).
+- **A page per contract.** `/explorer/contract/<root>/<parameters>` shows one
+  contract instance, by its commitment root and its parameters: its terms, the
+  coins that hold it now with their state, and every spend in order, each with
+  its path, cost, witness, the state it found, the outputs `2k` and `2k+1` it
+  owns where the template uses them, and the next state it made, so a contract
+  re-created at a new address on each spend is followed across every
+  re-creation. `/explorer/contract/<root>` lists every spend of a root.
 - **Per-asset amounts and any-asset fees.** Sequentia has an open fee market:
   a transaction fee can be paid in any accepted asset, so fee rates are shown
   in the fee asset's own base units per vByte (never "sat/vB", which is
@@ -148,8 +161,11 @@ serves the static build plus, on the same origin:
   `/bridge` (Compages bridge)
 - static mounts: `/download` (release artifacts, `DOWNLOAD_DIR`) and `/wallet`
   (the built SWK web wallet, `WALLET_DIR`)
-- node-backed helpers that shell out to `sequentia-cli` on the host (testnet
-  faucet at `POST /faucet`, fee-asset exchange rates at `GET /feerates`, how many
+- a proxy at `/faucet` to the testnet faucet, which is its own service
+  ([`sequentia-faucet`](https://github.com/ConcatenaLabs/sequentia-faucet),
+  `SEQ_FAUCET`, default `127.0.0.1:9960`)
+- node-backed helpers that shell out to `sequentia-cli` on the host
+  (fee-asset exchange rates at `GET /feerates`, how many
   of the broadcast nodes accept each fee asset, and how many list it at all (a node listing it at rate zero refuses it), at `GET /feeinfo`, how busy the
   next block is at `GET /congestion?asset=`, the producer's fee estimate at
   `GET /estimatefee?blocks=&asset=`, anchor
@@ -189,7 +205,11 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
   transaction recorded from a regtest chain (`test/fixtures/`);
   `contract-labels.regtest.test.mjs` - the same end to end: a local chain, the
   drip tool, sequentia-electrs, the registry, and this explorer built, served by
-  `serve-public.js` and rendered in headless Chromium.
+  `serve-public.js` and rendered in headless Chromium;
+  `contract-views.regtest.test.mjs` - the decoded contract views end to end: a
+  vault taken, topped up, repaid and liquidated in part by the regtest harness
+  of sequentia-contracts, indexed and decoded by sequentia-electrs, and its
+  transaction and contract pages rendered.
 - `run-sequentia-explorer.sh`, `run-testnet4-explorer.sh` - local dev servers.
 - `downloads/` - a copy of the `/download` page for a local run (built
   artifacts are dropped in at deploy time and are not committed). The pages
@@ -221,8 +241,11 @@ The fork keeps upstream's structure; the Sequentia work is concentrated in:
   and Concatena Labs branding.
 - `esplora/client/src/lib/contracts.js`, `views/tx-vin.js`, `views/tx-vout.js` -
   contract labels and next-spend links from the registry's contract index.
+- `esplora/client/src/views/contract-parts.js`, `views/contract.js` - the
+  decoded contract inputs and outputs, and the contract pages.
 - `esplora/client/src/app.js` - market-data price fetch, contract index fetch,
-  settings wiring.
+  the decoded contracts of a transaction, the contract page routes
+  (`contract/:root/:params`, `contract/:root`), settings wiring.
 
 Upstream documentation is kept for reference: `esplora/README.md` (build
 system, configuration options, upstream Docker deployment) and
@@ -237,11 +260,15 @@ The tests:
 node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
+SEQUENTIA_REPO=... CONTRACTS_DIR=... SEQC=... ELECTRS=... REGISTRY_DIR=... CHROME=... \
+  node --test contract-views.regtest.test.mjs
 ```
 
-The second needs a built node, the faucet's drip tool, a sequentia-electrs
-binary, a registry checkout, `seqc` from sequentia-contracts and a Chromium; its
-header says which is which, and it is skipped without them. Other views have no
+The last two need a built node, a sequentia-electrs binary built with
+`--features sequentia`, a registry checkout, `seqc` from sequentia-contracts
+and a Chromium; the first of them also the faucet's drip tool, the second a
+Sequentia checkout and a sequentia-contracts checkout for its regtest harness.
+Each header says which is which, and each is skipped without them. Other views have no
 automated coverage, so check them by clicking through the affected pages
 against a running API.
 

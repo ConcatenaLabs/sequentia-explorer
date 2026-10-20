@@ -5,7 +5,7 @@ The public front door of the Sequentia testnet site. Two things live here:
 - `esplora/` — a vendored fork of Blockstream Esplora, the explorer frontend, built to static
   assets under `esplora/dist/{explorer,testnet4}` (gitignored; not source).
 - `serve-public.js` — one hand-written Express 4 server (~600 lines) that serves those static
-  builds and everything else on the domain: the two menu pages, the wallet, the download pages, the faucet page, and
+  builds and everything else on the domain: the two menu pages, the wallet, the download pages, and
   reverse proxies to the indexers, registry, price feed, DEX and order-book relays.
 
 The indexer itself is **not** here; it was split out to
@@ -33,18 +33,28 @@ node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 covers the contract labels in `esplora/client/src/lib/contracts.js` on recorded regtest
 transactions. `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
 electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six
-environment variables name the binaries; its header lists them. It builds into
-`esplora/dist/explorer`. There is no CI.
+environment variables name the binaries; its header lists them. `contract-views.regtest.test.mjs`
+does the same for the decoded contract views, on a vault the contracts harness drives. Both build
+into `esplora/dist/explorer`. There is no CI.
 
 `deploy/systemd/` holds the three units (the server plus the two electrs instances) and
 `deploy/README.md` documents the environment variables and install steps.
 
 ## The faucet
 
-The faucet was off from 2026-07-29 to 2026-08-12: an automated watchdog destroyed the treasury
-wallet, and the funds behind it were recreated by the node's height-89500 recovery fork. It is
-live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (default
-`treasury2026`) through `sequentia-cli`; the history is in the comment above the handler.
+The faucet is its own service, in
+[`sequentia-faucet`](https://github.com/ConcatenaLabs/sequentia-faucet). This server only proxies
+`/faucet` to it (`SEQ_FAUCET`, default `127.0.0.1:9960`), stripping the prefix, and lists it on the
+menu pages. Nothing here pays anyone.
+
+## Contracts
+
+A transaction page asks the indexer for its contract inputs decoded (`/api/tx/:txid/contracts`,
+sequentia-electrs) and shows them through `views/contract-parts.js`; `views/contract.js` renders
+`contract/<root>/<parameters>` (one instance, from `/api/contracts/<root>/instance/<parameters>`)
+and `contract/<root>` (every spend of a root). Names come only from the registry's verified
+templates, through the indexer: never write a product or template name into this code, and keep
+the registry-index label (`lib/contracts.js`) as the fallback for an indexer without the decoder.
 
 ## Things that break if you get them wrong
 
@@ -74,7 +84,7 @@ live again. `POST /faucet` validates the address and pays from `FAUCET_WALLET` (
   [`sequentia-registry`](https://github.com/ConcatenaLabs/sequentia-registry);
   `/prices`, `/dex`, `/seqob*` and `/bridge` proxy to their own services.
 - The server never speaks JSON-RPC itself. Where it needs the node (broadcast override, fee
-  rates, anchor reads, and the faucet) it shells out to `sequentia-cli -datadir=...`
+  rates, anchor reads) it shells out to `sequentia-cli -datadir=...`
   and inherits the node's cookie auth. That is why no RPC credentials appear anywhere in this
   repo — keep it that way.
 

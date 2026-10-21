@@ -169,7 +169,10 @@ serves the static build plus, on the same origin:
   of the broadcast nodes accept each fee asset, and how many list it at all (a node listing it at rate zero refuses it), at `GET /feeinfo`, how busy the
   next block is at `GET /congestion?asset=`, the producer's fee estimate at
   `GET /estimatefee?blocks=&asset=`, anchor
-  reads at `GET /anchor/:hash` and `GET /anchorstatus`, and a `POST /api/tx`
+  reads at `GET /anchor/:hash` and `GET /anchorstatus`, the testnet4 chains
+  competing near the tip at `GET /testnet4/forks` (from `bitcoin-cli getchaintips`,
+  `T4_CLI`/`T4_DATADIR`: while one exists Sequentia anchors nothing past the
+  fork), and a `POST /api/tx`
   broadcast override that forwards raw transactions to a block producer). These
   default to the production box's node paths; override or ignore them for a
   local static+proxy setup.
@@ -198,6 +201,8 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
 - `serve-public.js` - the production static+proxy server (Express 4).
 - `feerates.js` - the fee-asset helpers behind `GET /feerates` and
   `GET /feeinfo`, with their own suite in `feerates.test.mjs`.
+- `parent-forks.js` - the competing testnet4 chains behind `GET /testnet4/forks`,
+  with their own suite in `parent-forks.test.mjs`.
 - `liquidity-page.test.mjs` - the `/liquidity` page: its route, its menu card,
   and that it renders the LSP's figures as text
 - `contract-labels.test.mjs` - the contract labels
@@ -257,7 +262,7 @@ Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
 The tests:
 
 ```sh
-node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
 SEQUENTIA_REPO=... CONTRACTS_DIR=... SEQC=... ELECTRS=... REGISTRY_DIR=... CHROME=... \

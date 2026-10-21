@@ -10,6 +10,7 @@
 // Express 5 changed wildcard handling). See explorer/package.json.
 const express = require('express')
 const { intersectAtMinimum, combineFeeInfo } = require('./feerates')
+const { competingBranches } = require('./parent-forks')
 const http = require('http')
 const path = require('path')
 
@@ -362,6 +363,23 @@ app.get('/anchorstatus', (req, res) => {
     if (err) return res.status(502).json({ error: 'anchorstatus unavailable' })
     anchorStatusCache = { at: Date.now(), body: stdout }
     res.type('json').send(stdout)
+  })
+})
+
+// Competing testnet4 chains near the tip (parent-forks.js): while one exists Sequentia anchors no
+// block past the fork, and a swap with an on-chain BTC leg waits for the anchor. The wallet reads
+// this to say so. Before the /testnet4/api proxy's catch-all page route; cached 30 s.
+const T4_CLI = process.env.T4_CLI || '/root/bitcoin-28.1/bin/bitcoin-cli'
+const T4_DATADIR = process.env.T4_DATADIR || '/root/.bitcoin'
+let t4ForksCache = { at: 0, body: null }
+app.get('/testnet4/forks', (req, res) => {
+  if (t4ForksCache.body && Date.now() - t4ForksCache.at < 30000) return res.json(t4ForksCache.body)
+  execFile(T4_CLI, ['-datadir=' + T4_DATADIR, '-testnet4', 'getchaintips'], { timeout: 10000, maxBuffer: 1 << 22 }, (err, stdout) => {
+    if (err) return res.status(502).json({ error: 'testnet4 chain tips unavailable' })
+    try {
+      t4ForksCache = { at: Date.now(), body: competingBranches(JSON.parse(stdout)) }
+      res.json(t4ForksCache.body)
+    } catch { res.status(502).json({ error: 'testnet4 chain tips parse' }) }
   })
 })
 

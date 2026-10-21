@@ -26,10 +26,11 @@ node serve-public.js            # default :8080
 automated tests are:
 
 ```sh
-node --test feerates.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 ```
 
-`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `contract-labels.test.mjs`
+`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `parent-forks.test.mjs` covers
+`competingBranches` in `parent-forks.js`; `contract-labels.test.mjs`
 covers the contract labels in `esplora/client/src/lib/contracts.js` on recorded regtest
 transactions. `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
 electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six

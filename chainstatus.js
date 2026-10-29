@@ -11,14 +11,19 @@
 //   own Bitcoin watcher has checked (`anchorstatus` "ok") and lie within
 //   `anchorMaxBehind` blocks of the Bitcoin tip the testnet4 indexer reports.
 //   An anchor the node cannot check, or one that has fallen behind, is not
-//   current, whatever the height says.
+//   current, whatever the height says. While Bitcoin runs competing chains
+//   above some height (`forks`, from parent-forks.js), the node anchors at the
+//   last height they share and the anchor is `waiting`: the anchoring rule at
+//   work, not a fault, so `ok` stays true and the answer says from where
+//   Bitcoin is contested. New blocks become final once Bitcoin settles.
 //
 // Inputs: `info` is getblockchaininfo, `anchor` is getanchorstatus, `btcHeight`
-// is the testnet4 tip height (null when the indexer did not answer), `now` is
+// is the testnet4 tip height (null when the indexer did not answer), `forks` is
+// competingBranches() of testnet4's chain tips (null when unknown), `now` is
 // unix seconds.
 const DEFAULT_LIMITS = { blockLateSeconds: 300, blockStalledSeconds: 900, anchorMaxBehind: 6 }
 
-function chainVerdict({ info, anchor, btcHeight, now, limits = DEFAULT_LIMITS }) {
+function chainVerdict({ info, anchor, btcHeight, forks = null, now, limits = DEFAULT_LIMITS }) {
   const age = Math.max(0, now - Number(info.time))
   const blockState = age <= limits.blockLateSeconds ? 'on_time'
     : age <= limits.blockStalledSeconds ? 'late' : 'stalled'
@@ -28,6 +33,7 @@ function chainVerdict({ info, anchor, btcHeight, now, limits = DEFAULT_LIMITS })
   let anchorState
   if (anchor.anchorstatus !== 'ok') anchorState = 'unchecked'
   else if (!known) anchorState = 'bitcoin_unknown'
+  else if (behind > 0 && forks && forks.contested_from != null && Number(anchor.anchorheight) >= forks.contested_from - 1) anchorState = 'waiting'
   else anchorState = behind <= limits.anchorMaxBehind ? 'current' : 'behind'
 
   return {
@@ -36,12 +42,13 @@ function chainVerdict({ info, anchor, btcHeight, now, limits = DEFAULT_LIMITS })
     tip_time: Number(info.time),
     blocks: { ok: blockState === 'on_time', state: blockState, age_seconds: age },
     anchor: {
-      ok: anchorState === 'current',
+      ok: anchorState === 'current' || anchorState === 'waiting',
       state: anchorState,
       height: Number(anchor.anchorheight),
       bitcoin_height: known ? btcHeight : null,
       behind,
       check: anchor.anchorstatus,
+      ...(anchorState === 'waiting' ? { contested_from: forks.contested_from } : {}),
     },
     checked_at: now,
   }

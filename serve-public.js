@@ -397,8 +397,8 @@ app.get('/chainstatus', async (req, res) => {
   res.set('Cache-Control', 'no-cache')
   if (chainStatusCache.body && Date.now() - chainStatusCache.at < 10000) return res.json(chainStatusCache.body)
   try {
-    const [info, anchor, btcHeight] = await Promise.all([anchorNodeJson('getblockchaininfo'), anchorNodeJson('getanchorstatus'), t4TipHeight()])
-    const body = chainVerdict({ info, anchor, btcHeight, now: Math.floor(Date.now() / 1000), limits: CHAIN_LIMITS })
+    const [info, anchor, btcHeight, forks] = await Promise.all([anchorNodeJson('getblockchaininfo'), anchorNodeJson('getanchorstatus'), t4TipHeight(), t4Forks()])
+    const body = chainVerdict({ info, anchor, btcHeight, forks, now: Math.floor(Date.now() / 1000), limits: CHAIN_LIMITS })
     chainStatusCache = { at: Date.now(), body }
     res.json(body)
   } catch { res.status(502).json({ error: 'chain status unavailable' }) }
@@ -410,15 +410,18 @@ app.get('/chainstatus', async (req, res) => {
 const T4_CLI = process.env.T4_CLI || '/root/bitcoin-28.1/bin/bitcoin-cli'
 const T4_DATADIR = process.env.T4_DATADIR || '/root/.bitcoin'
 let t4ForksCache = { at: 0, body: null }
-app.get('/testnet4/forks', (req, res) => {
-  if (t4ForksCache.body && Date.now() - t4ForksCache.at < 30000) return res.json(t4ForksCache.body)
+// testnet4's competing chains, cached 30 s; null when bitcoind does not answer.
+const t4Forks = () => new Promise(resolve => {
+  if (t4ForksCache.body && Date.now() - t4ForksCache.at < 30000) return resolve(t4ForksCache.body)
   execFile(T4_CLI, ['-datadir=' + T4_DATADIR, '-testnet4', 'getchaintips'], { timeout: 10000, maxBuffer: 1 << 22 }, (err, stdout) => {
-    if (err) return res.status(502).json({ error: 'testnet4 chain tips unavailable' })
-    try {
-      t4ForksCache = { at: Date.now(), body: competingBranches(JSON.parse(stdout)) }
-      res.json(t4ForksCache.body)
-    } catch { res.status(502).json({ error: 'testnet4 chain tips parse' }) }
+    if (err) return resolve(null)
+    try { t4ForksCache = { at: Date.now(), body: competingBranches(JSON.parse(stdout)) }; resolve(t4ForksCache.body) } catch { resolve(null) }
   })
+})
+app.get('/testnet4/forks', async (req, res) => {
+  const body = await t4Forks()
+  if (!body) return res.status(502).json({ error: 'testnet4 chain tips unavailable' })
+  res.json(body)
 })
 
 // The two menu pages. The site root is the public front door and lists seven

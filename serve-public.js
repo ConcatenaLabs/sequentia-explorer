@@ -366,6 +366,44 @@ app.get('/anchorstatus', (req, res) => {
   })
 })
 
+// Chain health for the status page and its checker (/status/): the tip's height
+// and age, and whether its Bitcoin anchor is current. The verdict is in
+// chainstatus.js. A slow chain is HTTP 200 with `ok` flags false, so it reads
+// as a verdict rather than as an outage of this endpoint; only an unreadable
+// node answers 502.
+const { chainVerdict, DEFAULT_LIMITS } = require('./chainstatus')
+const CHAIN_LIMITS = {
+  blockLateSeconds: Number(process.env.CHAIN_BLOCK_LATE_SECONDS || DEFAULT_LIMITS.blockLateSeconds),
+  blockStalledSeconds: Number(process.env.CHAIN_BLOCK_STALLED_SECONDS || DEFAULT_LIMITS.blockStalledSeconds),
+  anchorMaxBehind: Number(process.env.CHAIN_ANCHOR_MAX_BEHIND || DEFAULT_LIMITS.anchorMaxBehind),
+}
+const anchorNodeJson = method => new Promise((resolve, reject) =>
+  execFile(ANCHOR_CLI, ['-datadir=' + ANCHOR_DATADIR, method], { timeout: 10000 }, (err, stdout) => {
+    if (err) return reject(err)
+    try { resolve(JSON.parse(stdout)) } catch (e) { reject(e) }
+  }))
+const t4TipHeight = () => new Promise(resolve => {
+  const [host, port] = T4_ELECTRS.split(':')
+  const req = http.get({ host, port, path: '/blocks/tip/height', timeout: 5000 }, r => {
+    let body = ''
+    r.on('data', c => { body += c })
+    r.on('end', () => { const n = Number(body); resolve(r.statusCode === 200 && Number.isInteger(n) ? n : null) })
+  })
+  req.on('timeout', () => req.destroy())
+  req.on('error', () => resolve(null))
+})
+let chainStatusCache = { at: 0, body: null }
+app.get('/chainstatus', async (req, res) => {
+  res.set('Cache-Control', 'no-cache')
+  if (chainStatusCache.body && Date.now() - chainStatusCache.at < 10000) return res.json(chainStatusCache.body)
+  try {
+    const [info, anchor, btcHeight] = await Promise.all([anchorNodeJson('getblockchaininfo'), anchorNodeJson('getanchorstatus'), t4TipHeight()])
+    const body = chainVerdict({ info, anchor, btcHeight, now: Math.floor(Date.now() / 1000), limits: CHAIN_LIMITS })
+    chainStatusCache = { at: Date.now(), body }
+    res.json(body)
+  } catch { res.status(502).json({ error: 'chain status unavailable' }) }
+})
+
 // Competing testnet4 chains near the tip (parent-forks.js): while one exists Sequentia anchors no
 // block past the fork, and a swap with an on-chain BTC leg waits for the anchor. The wallet reads
 // this to say so. Before the /testnet4/api proxy's catch-all page route; cached 30 s.

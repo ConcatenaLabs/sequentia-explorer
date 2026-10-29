@@ -47,7 +47,11 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    rates (`GET /feerates`), per-node fee-asset acceptance (`GET /feeinfo`), next-block
    congestion (`GET /congestion`, from the producer), fee estimates (`GET /estimatefee`, from the
    producer), anchor reads (`GET /anchor/:hash`,
-   `GET /anchorstatus`), and a `POST /api/tx` broadcast override that forwards
+   `GET /anchorstatus`), chain health for the status page (`GET /chainstatus`:
+   the tip's height and age, and whether its Bitcoin anchor is checked and
+   within `CHAIN_ANCHOR_MAX_BEHIND` blocks of the testnet4 tip, default 6; the
+   tip is late after `CHAIN_BLOCK_LATE_SECONDS`, default 300, and stalled after
+   `CHAIN_BLOCK_STALLED_SECONDS`, default 900), and a `POST /api/tx` broadcast override that forwards
    raw transactions to the block producers (the committee mesh does not relay
    externally submitted transactions). These are configured by `PRODUCER_DATADIR(S)`,
    `BROADCAST_DATADIR`, `BACKSTOP_MAX_ATTEMPTS` (how often the backstop

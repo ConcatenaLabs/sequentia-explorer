@@ -171,7 +171,8 @@ serves the static build plus, on the same origin:
   `GET /estimatefee?blocks=&asset=`, anchor
   reads at `GET /anchor/:hash` and `GET /anchorstatus`, chain health for the
   status page at `GET /chainstatus` (the tip's height and age, and whether its
-  Bitcoin anchor is current), the testnet4 chains
+  Bitcoin anchor is current, or `waiting` while testnet4 runs competing chains
+  above the height it anchors to), the testnet4 chains
   competing near the tip at `GET /testnet4/forks` (from `bitcoin-cli getchaintips`,
   `T4_CLI`/`T4_DATADIR`: while one exists Sequentia anchors nothing past the
   fork), and a `POST /api/tx`

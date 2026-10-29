@@ -169,7 +169,9 @@ serves the static build plus, on the same origin:
   of the broadcast nodes accept each fee asset, and how many list it at all (a node listing it at rate zero refuses it), at `GET /feeinfo`, how busy the
   next block is at `GET /congestion?asset=`, the producer's fee estimate at
   `GET /estimatefee?blocks=&asset=`, anchor
-  reads at `GET /anchor/:hash` and `GET /anchorstatus`, the testnet4 chains
+  reads at `GET /anchor/:hash` and `GET /anchorstatus`, chain health for the
+  status page at `GET /chainstatus` (the tip's height and age, and whether its
+  Bitcoin anchor is current), the testnet4 chains
   competing near the tip at `GET /testnet4/forks` (from `bitcoin-cli getchaintips`,
   `T4_CLI`/`T4_DATADIR`: while one exists Sequentia anchors nothing past the
   fork), and a `POST /api/tx`
@@ -262,7 +264,7 @@ Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
 The tests:
 
 ```sh
-node --test feerates.test.mjs parent-forks.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
 SEQUENTIA_REPO=... CONTRACTS_DIR=... SEQC=... ELECTRS=... REGISTRY_DIR=... CHROME=... \

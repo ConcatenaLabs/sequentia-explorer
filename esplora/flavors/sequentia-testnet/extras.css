@@ -229,6 +229,22 @@ html[data-seq-theme="light"] .block-stat-title,
 html[data-seq-theme="light"] .asset-sort-icon,
 html[data-seq-theme="light"] .pagination-dropdown-container p { color: #5a636b; }
 
+/* Figures the base sheet draws in white: each block's transaction count, size
+   and usage, each transaction's value and size, and the column headers above
+   them (Latest Transactions, the asset list). */
+html[data-seq-theme="light"] .block-stat-value,
+html[data-seq-theme="light"] .usage-number,
+html[data-seq-theme="light"] .transaction-table-transaction-value,
+html[data-seq-theme="light"] .transaction-table-transaction-value span,
+html[data-seq-theme="light"] .transaction-table-transaction-size,
+html[data-seq-theme="light"] .ref-value,
+html[data-seq-theme="light"] .asset-list-name,
+html[data-seq-theme="light"] .asset-list-issuer-domain { color: #1a1c1f; }
+html[data-seq-theme="light"] .table-title-row a { color: #1a1c1f !important; }
+html[data-seq-theme="light"] .transaction-table-transaction-value .value-more { color: #5a636b; }
+/* The footer's GitHub mark is a white image: dark on a light page. */
+html[data-seq-theme="light"] img[src$="github_blue.png"] { filter: invert(1); }
+
 /* Base rules that use !important need !important to override. */
 html[data-seq-theme="light"] .asset-list-ticker,
 html[data-seq-theme="light"] .asset-list-total-supply { color: #1a1c1f !important; }
@@ -279,3 +295,15 @@ html[data-seq-theme="light"] .navbar-brand { background: var(--seq-dark); }
 }
 .contract-page { padding-top: 1.5em; }
 .contract-page .contract-terms > div > div { text-align: left; }
+
+/* The asset list: the registered assets first, then every asset on the chain,
+   with the unnamed single-unit ones folded under one line per page. */
+.asset-list-section { font-size: 15px; font-weight: 600; margin: 28px 0 10px; color: inherit; }
+.asset-list-registered .asset-list-section:first-child { margin-top: 8px; }
+.asset-list-none { color: #8a929a; }
+.asset-list-folded { margin-top: 10px; }
+.asset-list-folded > summary { cursor: pointer; padding: 12px 4px; color: #9aa0a6; font-size: 14px; }
+.asset-list-folded > summary:hover { color: #f5b301; }
+html[data-seq-theme="light"] .asset-list-folded > summary { color: #5a636b; }
+/* On a phone each asset is a card of stacked lines, so the column titles go. */
+@media (max-width: 600px) { .asset-container .table-title-row { display: none; } }

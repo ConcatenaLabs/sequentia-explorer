@@ -25,6 +25,43 @@ import {
 } from "../components/icons";
 
 const staticRoot = process.env.STATIC_ROOT || "";
+
+// The registered assets (those the registry names), by ticker: the ones a
+// visitor looks for, listed above the chain's full list on its first page.
+const registeredAssets = (assetMap) =>
+  Object.entries(assetMap || {})
+    .filter(([, [, ticker, name] = []]) => ticker || name)
+    .map(([asset_id, [domain, ticker, name]]) => ({ asset_id, domain, ticker, name }))
+    .sort((a, b) => String(a.ticker || a.name).localeCompare(String(b.ticker || b.name)));
+
+// An asset the registry does not name and of which one unit was issued (a
+// token a contract or an order made for itself): folded on the full list.
+const isUnnamedSingle = (asset, label) =>
+  !label.name && !label.ticker && asset.chain_stats && asset.chain_stats.issued_amount === 1;
+
+const dash = <span className="asset-list-none">—</span>;
+
+const assetRow = (asset_id, label, supply, t) => (
+  <a href={`asset/${asset_id}`}>
+  <div className="assets-table-link-row">
+    <div className="assets-table-row">
+      <div className="asset-list-name" data-label={t`Name`}>
+        <CurrencyDollarIcon className="currency-dollar" />
+        {label.name || <span className="mono">{asset_id.substring(0, 12)}…</span>}
+      </div>
+      <div className="asset-list-ticker" data-label={t`Ticker`}>
+        {label.ticker || dash}
+      </div>
+      <div className="asset-list-total-supply" data-label={t`Total Supply`}>
+        {supply}
+      </div>
+      <div className="asset-list-issuer-domain" data-label={t`Issuer domain`}>
+        {label.domain || dash}
+      </div>
+    </div>
+  </div>
+  </a>
+);
 export default ({ assetList, goAssetList, loading, t, assetMap, ...S }) => {
   const { assets, total } = assetList || {};
   const { start_index, sort_dir, sort_field, limit } = goAssetList;
@@ -51,38 +88,31 @@ export default ({ assetList, goAssetList, loading, t, assetMap, ...S }) => {
               <h1 className="table-header-title">All Assets</h1>
             </div>
 
-            <div className="table-title-row">
-              {sortHeader("NAME", "name", "asset-list-name", { sort_field, sort_dir, reverseSortDir })}
-              {sortHeader("TICKER", "ticker", "asset-list-ticker", { sort_field, sort_dir, reverseSortDir })}
-              {sortHeader("TOTAL SUPPLY", null, "asset-list-total-supply", { sort_field, sort_dir, reverseSortDir })}
-              {sortHeader("ISSUER DOMAIN", "domain", "asset-list-issuer-domain", { sort_field, sort_dir, reverseSortDir })}
-            </div>
+            {start_index === 0 && registeredAssets(assetMap).length ? (
+              <div className="asset-list-registered">
+                <h2 className="asset-list-section">{t`Registered assets`}</h2>
+                {titleRow({ sort_field, sort_dir, reverseSortDir }, false)}
+                <div className="asset-list-body">
+                  {registeredAssets(assetMap).map((r) => assetRow(r.asset_id, r, "", t))}
+                </div>
+                <h2 className="asset-list-section">{t`Every asset on the chain`}</h2>
+              </div>
+            ) : ""}
+
+            {titleRow({ sort_field, sort_dir, reverseSortDir }, true)}
 
             <div className={`asset-list-body ${loading ? "asset-list-body-loading" : ""}`}>
-              {assets.map((asset) => {
-                const label = resolveLabel(asset, assetMap);
-                return (
-                <a href={`asset/${asset.asset_id}`}>
-                <div className="assets-table-link-row">
-                  <div className="assets-table-row">
-                    <div className="asset-list-name" data-label={t`Name`}>
-                      <CurrencyDollarIcon className="currency-dollar" />
-                      {label.name || <span className="mono">{asset.asset_id.substring(0, 12)}…</span>}
-                    </div>
-                    <div className="asset-list-ticker" data-label={t`Ticker`}>
-                      {label.ticker || <em>None</em>}
-                    </div>
-                    <div className="asset-list-total-supply" data-label={t`Total Supply`}>
-                      {getSupply(asset, t)}
-                    </div>
-                    <div className="asset-list-issuer-domain" data-label={t`Issuer domain`}>
-                      {label.domain || <em>None</em>}
-                    </div>
-                  </div>
-                </div>
-                </a>
-                );
-              })}
+              {assets.filter((asset) => !isUnnamedSingle(asset, resolveLabel(asset, assetMap)))
+                .map((asset) => assetRow(asset.asset_id, resolveLabel(asset, assetMap), getSupply(asset, t), t))}
+              {(() => {
+                const folded = assets.filter((asset) => isUnnamedSingle(asset, resolveLabel(asset, assetMap)));
+                return folded.length ? (
+                  <details className="asset-list-folded">
+                    <summary>{folded.length === 1 ? t`1 unnamed single-unit asset on this page` : `${folded.length} ${t`unnamed single-unit assets on this page`}`}</summary>
+                    {folded.map((asset) => assetRow(asset.asset_id, resolveLabel(asset, assetMap), getSupply(asset, t), t))}
+                  </details>
+                ) : "";
+              })()}
             </div>
             <div className="asset-list-footer">
               {paginationControls(total, start_index, limit, pageLink)}
@@ -94,6 +124,16 @@ export default ({ assetList, goAssetList, loading, t, assetMap, ...S }) => {
     { assetList, activeTab: "assets", t, ...S },
   );
 };
+
+// The column titles; `sortable` false for the registered list, which keeps its own order.
+const titleRow = (sort, sortable) => (
+  <div className="table-title-row">
+    {sortHeader("NAME", sortable ? "name" : null, "asset-list-name", sort)}
+    {sortHeader("TICKER", sortable ? "ticker" : null, "asset-list-ticker", sort)}
+    {sortHeader("TOTAL SUPPLY", null, "asset-list-total-supply", sort)}
+    {sortHeader("ISSUER DOMAIN", sortable ? "domain" : null, "asset-list-issuer-domain", sort)}
+  </div>
+);
 
 const sortHeader = (label, field, className, { sort_field, sort_dir, reverseSortDir }) => {
   if (!field) {

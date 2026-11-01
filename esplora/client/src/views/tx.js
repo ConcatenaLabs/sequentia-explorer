@@ -124,8 +124,28 @@ const btnDetailsContent = (isOpen, t) =>
     <div className={isOpen?'minus':'plus'}></div>
   </div>
 
-const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices
+// SEQUENTIA: what a transaction does in the Ark, from the explorer server's reading of the
+// rounds and trees the operator publishes (/ark-index/tx/:txid): a short label, linked to
+// the Ark section's entry for the round or the coin, and a line in plain words.
+const arkSentence = (a, t) => {
+  switch (a.role) {
+    case 'round': return t`makes round #${a.round}: coins held off the chain, in batches`
+    case 'unroll': return t`takes coins of round #${a.round} onto the chain`
+    case 'exit': return t`a coin of round #${a.round}, exited by its owner on the chain`
+    case 'spend': return t`a coin of round #${a.round} taken onto the chain, spent by its owner with the operator`
+    case 'reclaim': return t`the operator takes back a batch of round #${a.round} whose coins have all moved on`
+    case 'sweep': return a.round ? t`the operator takes back an expired batch of round #${a.round}` : t`the operator takes back an expired batch`
+    case 'offboard': return t`pays coins out of round #${a.round} to an address on the chain`
+    case 'board': return t`brings its owner's coins into the Ark`
+    case 'board_onchain': return t`takes a board's coin onto the chain`
+    default: return ''
+  }
+}
+export const arkHref = a => a.leaf_id ? `ark/${a.leaf_id}` : a.round ? `ark/${a.round}` : 'ark'
+
+const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices, arkTx
                       , txAnalysis: { feerate, mempoolDepth, confEstimate, overpaying, privacyAnalysis, segwitGains } }) => {
+  const ark = arkTx && arkTx.txid == tx.txid && arkTx.role ? arkTx : null
 
   // SEQUENTIA: fees may be paid in any asset (open fee market). The native-only
   // `tx.fee`/`feerate` are 0/null for a non-native fee, which previously hid the
@@ -141,6 +161,10 @@ const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices
 
   return (
   <div className="stats-table font-p2">
+    { ark && <div className="ark-label">
+      <div>{t`Ark`}</div>
+      <div><a href={arkHref(ark)} className="ark-badge">{ark.words}</a> <span className="text-gray">{arkSentence(ark, t)}</span></div>
+    </div> }
     <div>
       <div>{t`Status`}</div>
       <div>{confirmationText(tx.status, tipHeight, t)}</div>

@@ -13,6 +13,7 @@ export default S =>
             <a href="blocks/recent" class={{ active: S.activeTab == 'recentBlocks' }}>Blocks</a>
             <a href="tx/recent" class={{ active: S.activeTab == 'recentTxs' }}>Transactions</a>
             { process.env.IS_ELEMENTS ? <a href="assets" class={{ active: S.activeTab == 'assets' }}>Assets<sup className="highlight"></sup></a> : "" }
+            { process.env.IS_ELEMENTS ? <a href="ark" class={{ active: S.activeTab == 'ark' }}>Ark</a> : "" }
             <a href="/explorer-api" class={{ active: S.activeTab == 'apiLanding' }}>Explorer API</a>
             { process.env.IS_ELEMENTS ? <a href="settings" class={{ active: S.activeTab == 'settings' }}>Settings</a> : "" }
         </div>

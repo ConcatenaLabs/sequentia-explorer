@@ -17,6 +17,7 @@ if (process.env.IS_ELEMENTS) {
   exports.asset = require('./asset').default
   exports.contract = require('./contract').contract
   exports.contractRoot = require('./contract').contractRoot
+  exports.ark = require('./ark').default
 
   if (process.env.ASSET_MAP_URL) {
     exports.assetList = require('./asset-list').default

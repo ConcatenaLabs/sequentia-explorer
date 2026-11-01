@@ -91,6 +91,20 @@ details, mempool), plus Sequentia-specific views:
 - **Reference-currency valuation.** A Settings page (local-only preferences)
   lets users pick a reference currency; amounts get an approximate value from
   the market-data feed at `/prices`.
+- **The Ark.** Coins held off the chain sit in batches, each batch one output
+  of a round's transaction. The explorer server mirrors the rounds and batch
+  trees the Ark operator publishes (`ark-index.js`) and reads what the chain
+  shows of each, so a transaction's page carries a label when it is part of
+  the Ark: a round, an unroll (coins taken onto the chain), an exit, an
+  offboard, the operator's reclaim or sweep of a batch, or a board (coins
+  brought in), each linked to the Ark section. `/explorer/ark` searches by a
+  round's txid, a round's number or a coin's id: a round shows its batches,
+  their coins and value in each asset's units, and how each batch stands on
+  the chain; a coin shows its round, batch and place, and what the chain shows
+  of it, followed down its path from the batch output. Searching a coin's id
+  in the main search box finds it too. A board is recognised once its owner's
+  conversion spends it; an unspent board shows nothing public to recognise it
+  by. Payments made off the chain are never visible here.
 - **Network switcher.** Toggles between the Sequentia explorer and the Bitcoin
   testnet4 explorer of the parent chain.
 
@@ -269,7 +283,7 @@ Open PRs against `main`. Frontend changes need `./build-public.sh` to succeed.
 The tests:
 
 ```sh
-node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs ark-index.test.mjs
 SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=... \
   node --test contract-labels.regtest.test.mjs
 SEQUENTIA_REPO=... CONTRACTS_DIR=... SEQC=... ELECTRS=... REGISTRY_DIR=... CHROME=... \

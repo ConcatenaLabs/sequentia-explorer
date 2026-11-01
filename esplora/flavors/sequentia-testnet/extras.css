@@ -296,6 +296,17 @@ html[data-seq-theme="light"] .navbar-brand { background: var(--seq-dark); }
 .contract-page { padding-top: 1.5em; }
 .contract-page .contract-terms > div > div { text-align: left; }
 
+/* ---- The Ark (views/ark.js, and the label on a transaction's page) ---------- */
+.ark-page { padding-top: 1.5em; }
+.ark-page h2 { margin-top: 1.4em; }
+.ark-search { display: flex; gap: 0.5em; margin: 1.2em 0; max-width: 46em; }
+.ark-search-input { flex: 1; min-width: 0; padding: 0.55em 0.8em; border-radius: 8px; border: 1px solid rgba(127,127,127,0.4); background: transparent; color: inherit; font: inherit; }
+.ark-search-btn { padding: 0.55em 1.2em; border-radius: 8px; border: 0; background: var(--seq-amber); color: #0f1216; font-weight: 600; cursor: pointer; }
+.ark-table > div > div:last-child { overflow-wrap: anywhere; }
+.ark-batches { margin: 0.6em 0 1.4em; }
+.ark-batch { border-left: 3px solid rgba(127,127,127,0.35); padding: 0.35em 0 0.35em 0.9em; margin: 0.5em 0; overflow-wrap: anywhere; }
+.ark-badge { font-weight: 600; color: var(--seq-amber); }
+
 /* The asset list: the registered assets first, then every asset on the chain,
    with the unnamed single-unit ones folded under one line per page. */
 .asset-list-section { font-size: 15px; font-weight: 600; margin: 28px 0 10px; color: inherit; }

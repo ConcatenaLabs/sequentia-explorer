@@ -424,6 +424,168 @@ app.get('/testnet4/forks', async (req, res) => {
   res.json(body)
 })
 
+// The Ark section's data (ark-index.js): a mirror of the rounds and batch trees the Ark
+// operator publishes (its public `rounds` and `tree` calls), refreshed every
+// ARK_SYNC_SECONDS, and what the chain shows of each, read from this server's own electrs.
+// ARCA_OPERATOR is the operator's base URL, the path its `/v1/` calls sit under.
+const ark = require('./ark-index')
+const https = require('https')
+const ARCA_OPERATOR = (process.env.ARCA_OPERATOR || 'http://127.0.0.1:3535').replace(/\/+$/, '')
+const ARK_SYNC_SECONDS = Number(process.env.ARK_SYNC_SECONDS || 30)
+const ARK_MAX_ROUNDS = Number(process.env.ARK_MAX_ROUNDS || 20000)
+// Calls to the operator are paced to at most ARK_CALLS_PER_SECOND, the mirror's and the pages'
+// together: its public reads are budgeted per source, and this server is one source.
+const ARK_CALL_GAP_MS = 1000 / Number(process.env.ARK_CALLS_PER_SECOND || 8)
+const jsonRequest = (url, { method = 'GET', body, timeout = 10000 } = {}) => new Promise((resolve, reject) => {
+  const u = new URL(url)
+  const data = body == null ? null : JSON.stringify(body)
+  const req = (u.protocol == 'https:' ? https : http).request(u, {
+    method, timeout,
+    headers: data == null ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(data) },
+  }, r => {
+    let b = ''
+    r.setEncoding('utf8')
+    r.on('data', c => { b += c; if (b.length > 16 << 20) req.destroy(new Error('answer too large')) })
+    r.on('end', () => {
+      if (r.statusCode == 404) return resolve(null)
+      if (r.statusCode != 200) return reject(new Error(`${u.pathname}: HTTP ${r.statusCode}`))
+      try { resolve(JSON.parse(b)) } catch (e) { reject(e) }
+    })
+  })
+  req.on('timeout', () => req.destroy(new Error('timed out')))
+  req.on('error', reject)
+  req.end(data)
+})
+let arkLastCall = 0
+const arkPost = async (call, body) => {
+  const wait = Math.max(0, arkLastCall + ARK_CALL_GAP_MS - Date.now())
+  arkLastCall = Date.now() + wait
+  if (wait) await new Promise(r => setTimeout(r, wait))
+  return jsonRequest(`${ARCA_OPERATOR}/v1/${call}`, { method: 'POST', body })
+}
+const electrs = path => jsonRequest(`http://${SEQ_ELECTRS}${path}`)
+const arkMirror = new ark.ArkMirror({ post: arkPost, index: new ark.ArkIndex({ maxRounds: ARK_MAX_ROUNDS }),
+  onError: e => console.warn('ark mirror:', e.message) })
+let arkSyncing = false
+const arkSync = () => {
+  if (arkSyncing) return
+  arkSyncing = true
+  arkMirror.sync().finally(() => { arkSyncing = false })
+}
+arkSync()
+setInterval(arkSync, ARK_SYNC_SECONDS * 1000)
+
+// Answers cached a short while: a chain read per page view is enough.
+const arkCache = new Map()
+const arkCached = (key, ms, make) => {
+  const hit = arkCache.get(key)
+  if (hit && Date.now() - hit.at < ms) return hit.value
+  const value = make()
+  if (arkCache.size > 5000) arkCache.clear()
+  arkCache.set(key, { at: Date.now(), value })
+  value.catch(() => arkCache.delete(key))
+  return value
+}
+const arkTx = txid => arkCached('tx:' + txid, 60000, () => electrs(`/tx/${txid}`))
+const arkOutspend = (txid, vout) => arkCached(`os:${txid}:${vout}`, 15000, () => electrs(`/tx/${txid}/outspend/${vout}`))
+const arkBoard = leafId => arkCached('board:' + leafId, 15000, () => arkPost('board_status', { leaf_id: leafId }).catch(() => null))
+// The transactions spending a transaction's taproot outputs, at most eight: what a
+// board's funding is recognised by.
+const arkSpenders = async tx => {
+  const outs = await arkCached('oss:' + tx.txid, 15000, () => electrs(`/tx/${tx.txid}/outspends`)) || []
+  const picks = outs.map((o, vout) => ({ o, vout })).filter(({ o, vout }) => o && o.spent && ark.programOf((tx.vout[vout] || {}).scriptpubkey)).slice(0, 8)
+  return Promise.all(picks.map(async ({ o, vout }) => ({ vout, spender: await arkTx(o.txid).catch(() => null) })))
+}
+
+const TEMPLATE_WORDS = {
+  'vtxo-1': 'coin', 'vtxo-2': 'coin', 'board-1': 'coin brought in by a board', 'htlc-1': 'coin held for a payment until it settles',
+  'order-2': 'resting order', 'order-3': 'resting order', 'landing-1': 'coin of a supervised asset',
+  'enclave-1': 'coin of a restricted asset', 'channel-1': 'channel coin',
+}
+const arkRoundJson = async round => {
+  const outspends = await arkCached('oss:' + round.txid, 15000, () => electrs(`/tx/${round.txid}/outspends`)).catch(() => null)
+  const batches = await Promise.all(round.batches.map(async b => {
+    const o = outspends && outspends[b.vout]
+    const spender = o && o.spent ? await arkTx(o.txid).catch(() => null) : null
+    const chain = !outspends ? { state: 'unknown', words: 'not readable now' }
+      : round.state == 'lost' ? { state: 'lost', words: 'never came to be' }
+      : ark.batchStateWords(spender, arkMirror.index)
+    return { vout: b.vout, kind: b.kind, asset: b.asset, coins: b.leaves, value: b.value, read: b.tree, templates: b.template, state: chain.state, words: chain.words, txid: chain.txid || null }
+  }))
+  const totals = {}
+  for (const b of batches) if (b.asset) totals[b.asset] = (BigInt(totals[b.asset] || 0) + BigInt(b.value)).toString()
+  return { kind: 'round', number: round.number, txid: round.txid, state: round.state, words: ark.roundStateWords(round.state),
+    coins: batches.reduce((n, b) => n + b.coins, 0), totals, batches }
+}
+const arkCoinJson = async place => {
+  const index = arkMirror.index
+  const round = index.round(place.round)
+  const state = await ark.coinState(place, round, { outspend: arkOutspend, getTx: arkTx })
+  return { kind: 'coin', leaf_id: place.leaf_id, round: place.number, round_txid: place.round, round_state: round ? round.state : null,
+    round_words: round ? ark.roundStateWords(round.state) : null, batch_vout: place.batch_vout, place: place.index + 1,
+    coins_in_batch: (round && (round.batches.find(b => b.vout == place.batch_vout) || {}).leaves) || null,
+    levels: place.depth, template: place.template, what: TEMPLATE_WORDS[place.template] || 'coin',
+    value: place.value, asset: place.asset, state: state.state, words: state.words, note: state.note || null, txid: state.txid || null }
+}
+const BOARD_WORDS = { pending: 'registered, waiting for its transaction to be final', credited: 'credited: its coin is in the Ark', lost: 'lost: its transaction will not confirm' }
+const arkBoardJson = (leafId, b) => ({ kind: 'board', leaf_id: leafId, txid: b.txid, vout: b.vout, state: b.state,
+  words: BOARD_WORDS[b.state] || b.state, finality: b.finality, exit_deadline: b.exit_deadline || null, expiry: b.expiry || null })
+
+const HEX64 = /^[0-9a-f]{64}$/
+// A miss while the mirror is still on its first pass says so: the round may not be read yet.
+const arkSend = (res, p) => p.then(body => body ? res.json(body) : res.status(404).json({ error: 'not found', syncing: !arkMirror.synced }),
+  () => res.status(502).json({ error: 'not readable now' }))
+app.get('/ark-index/status', (req, res) => {
+  const ix = arkMirror.index
+  res.json({ synced: arkMirror.synced, rounds: ix.rounds.size, coins: ix.leaves.size, last_round: ix.lastNumber() || null,
+    last_sync_age_seconds: arkMirror.lastSync ? Math.round((Date.now() - arkMirror.lastSync) / 1000) : null, error: arkMirror.lastError })
+})
+// The latest rounds, newest first.
+app.get('/ark-index/rounds', (req, res) => {
+  const ix = arkMirror.index, n = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50)
+  const numbers = [...ix.byNumber.keys()].sort((a, b) => b - a).slice(0, n)
+  res.json({ rounds: numbers.map(k => ix.rounds.get(ix.byNumber.get(k))).map(r => ({ number: r.number, txid: r.txid, state: r.state,
+    words: ark.roundStateWords(r.state), coins: r.batches.reduce((n, b) => n + b.leaves, 0), batches: r.batches.length })) })
+})
+app.get('/ark-index/round/:id', (req, res) => {
+  const id = String(req.params.id).toLowerCase()
+  if (!/^\d{1,12}$/.test(id) && !HEX64.test(id)) return res.status(400).json({ error: 'a round is a txid or a number' })
+  const round = arkMirror.index.round(id)
+  if (!round) return res.status(404).json({ error: 'not found', syncing: !arkMirror.synced })
+  arkSend(res, arkCached('round:' + round.txid, 10000, () => arkRoundJson(round)))
+})
+app.get('/ark-index/coin/:id', (req, res) => {
+  const id = String(req.params.id).toLowerCase()
+  if (!HEX64.test(id)) return res.status(400).json({ error: 'a coin id is 64 hex digits' })
+  const place = arkMirror.index.leaves.get(id)
+  if (place) return arkSend(res, arkCached('coin:' + id, 10000, () => arkCoinJson(place)))
+  arkSend(res, arkBoard(id).then(b => b && b.txid ? arkBoardJson(id, b) : null))
+})
+// A round txid, a round number or a coin id, whichever it is.
+app.get('/ark-index/find/:q', (req, res) => {
+  const q = String(req.params.q).trim().toLowerCase()
+  const ix = arkMirror.index
+  if (/^\d{1,12}$/.test(q) || (HEX64.test(q) && ix.rounds.has(q))) {
+    const round = ix.round(q)
+    if (!round) return res.status(404).json({ error: 'not found', syncing: !arkMirror.synced })
+    return arkSend(res, arkCached('round:' + round.txid, 10000, () => arkRoundJson(round)))
+  }
+  if (!HEX64.test(q)) return res.status(400).json({ error: 'search by a round txid, a round number or a coin id' })
+  const place = ix.leaves.get(q)
+  if (place) return arkSend(res, arkCached('coin:' + q, 10000, () => arkCoinJson(place)))
+  arkSend(res, arkBoard(q).then(b => b && b.txid ? arkBoardJson(q, b) : null))
+})
+// What a transaction is to the Ark, for the label on its page: { role: null } when nothing.
+app.get('/ark-index/tx/:txid', (req, res) => {
+  const txid = String(req.params.txid).toLowerCase()
+  if (!HEX64.test(txid)) return res.status(400).json({ error: 'bad txid' })
+  arkSend(res, arkCached('role:' + txid, 15000, async () => {
+    const tx = await arkTx(txid)
+    if (!tx) return { txid, role: null }
+    return { txid, ...((await ark.txRole(tx, arkMirror.index, { board: arkBoard, spenders: arkSpenders })) || { role: null }) }
+  }))
+})
+
 // The two menu pages. The site root is the public front door: the network's
 // one-line description, one step to start with (open the web wallet and take
 // test coins), then seven cards in the order a newcomer needs them: the web
@@ -593,4 +755,4 @@ server.on('upgrade', (req, socket, head) => {
 })
 
 server.listen(PORT, () =>
-  console.log(`explorer (static+proxy) on :${PORT}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /dex->${SEQ_DEX}  /seqob->${SEQ_SEQOB} (+ws)  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${SEQ_FAUCET}`))
+  console.log(`explorer (static+proxy) on :${PORT}  /ark-index<-${ARCA_OPERATOR}  /api->${SEQ_ELECTRS}  /testnet4/api->${T4_ELECTRS}  /dex->${SEQ_DEX}  /seqob->${SEQ_SEQOB} (+ws)  /download->${DOWNLOAD_DIR}  /wallet->${WALLET_DIR}  /faucet->${SEQ_FAUCET}`))

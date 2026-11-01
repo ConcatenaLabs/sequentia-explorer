@@ -1,0 +1,104 @@
+{
+ "about": "The Arca covenant golden vectors of a board (arca regtest/vectors/transactions.json, board), decoded by test/make-ark-board-fixture.mjs.",
+ "leaf_id": "23aacb89ba550b178263228ed3db350d46f39068c50449bb51438e30bcc79cb4",
+ "board_script_pubkey": "512049d49a8cf2494adf465020b65027325b16a95902de89b0b827aa64f5d12de820",
+ "leaf_script_pubkey": "51201fb0a0a654be06a8f9026b71cad9619233de0d5019136a2af7fc01016bc59b2c",
+ "board_vout": 0,
+ "funding": {
+  "txid": "50423568f1ac19b9851b5eee64a8b399319722c012e386e995facbd272a7ddce",
+  "vin": [
+   {
+    "txid": "8a252ee1866121af9a37a9dc712f91cec8abf8d5e9a210eb32e405f9e42dae98",
+    "vout": 0,
+    "witness": [
+     "51",
+     "c550929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0"
+    ],
+    "prevout": {
+     "scriptpubkey": "5120e4d64b74544be8374e449819b51cdee29fec363a71a85a42b09dbeb792fc53f8",
+     "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+     "value": 20000000
+    }
+   },
+   {
+    "txid": "9320f3bc75841cf1a035185e3dfa44d9b06c0f54bd47683e453478ec482723ee",
+    "vout": 0,
+    "witness": [
+     "51",
+     "c550929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0"
+    ],
+    "prevout": {
+     "scriptpubkey": "5120e4d64b74544be8374e449819b51cdee29fec363a71a85a42b09dbeb792fc53f8",
+     "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+     "value": 9000000
+    }
+   }
+  ],
+  "vout": [
+   {
+    "scriptpubkey": "512049d49a8cf2494adf465020b65027325b16a95902de89b0b827aa64f5d12de820",
+    "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+    "value": 25000000
+   },
+   {
+    "scriptpubkey": "5120e4d64b74544be8374e449819b51cdee29fec363a71a85a42b09dbeb792fc53f8",
+    "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+    "value": 3998800
+   },
+   {
+    "scriptpubkey": "",
+    "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+    "value": 1200
+   }
+  ]
+ },
+ "conversion": {
+  "txid": "fafc5340170076502c1ef9954db898d666f88b6358141b3b544cba584f9d1d93",
+  "vin": [
+   {
+    "txid": "50423568f1ac19b9851b5eee64a8b399319722c012e386e995facbd272a7ddce",
+    "vout": 0,
+    "witness": [
+     "0a2806618ff99aacd9e89297bbef0e57a707b7b0f405e31c201e396e79174c5e3545fdc9627de6c1ab9208a0f1ce6399da283aa2aebdebcd3b61047d14d49163",
+     "20c47052e89ced320dbddd9d03a193eb6251a7c7d1d22297b6e007ec0e830da930ad00ce518820985f3bd029f58571c2d37c69e7be356d23b906aff6c75698c22cf3d4d2b474288800cf51880840787d01000000008800d15188201fb0a0a654be06a8f9026b71cad9619233de0d5019136a2af7fc01016bc59b2c87",
+     "c550929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0998001402b08d36407278947812d466f585ee0c850e6aac10bce79fb9a5f4894"
+    ],
+    "prevout": {
+     "scriptpubkey": "512049d49a8cf2494adf465020b65027325b16a95902de89b0b827aa64f5d12de820",
+     "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+     "value": 25000000
+    }
+   },
+   {
+    "txid": "7c5289be3240aaad6bb49e2aac7abbbc5ebd1670e20c140caee2ffabf2f8a7c1",
+    "vout": 1,
+    "witness": [
+     "51",
+     "c550929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0"
+    ],
+    "prevout": {
+     "scriptpubkey": "5120e4d64b74544be8374e449819b51cdee29fec363a71a85a42b09dbeb792fc53f8",
+     "asset": "5867c1038ee75415cf714017ccf2d041dbdb74bd545e88d58b1befa12d59f890",
+     "value": 50000
+    }
+   }
+  ],
+  "vout": [
+   {
+    "scriptpubkey": "51201fb0a0a654be06a8f9026b71cad9619233de0d5019136a2af7fc01016bc59b2c",
+    "asset": "2874b4d2d4f32cc29856c7f6af06b9236d35bee7697cd3c27185f529d03b5f98",
+    "value": 25000000
+   },
+   {
+    "scriptpubkey": "5120e4d64b74544be8374e449819b51cdee29fec363a71a85a42b09dbeb792fc53f8",
+    "asset": "5867c1038ee75415cf714017ccf2d041dbdb74bd545e88d58b1befa12d59f890",
+    "value": 47000
+   },
+   {
+    "scriptpubkey": "",
+    "asset": "5867c1038ee75415cf714017ccf2d041dbdb74bd545e88d58b1befa12d59f890",
+    "value": 3000
+   }
+  ]
+ }
+}

@@ -28,6 +28,10 @@ export default apiBase => {
     ? tryResource(`/tx/${query}`)
         .catch(_ => tryResource(`/block/${query}`))
         .catch(_ => process.env.IS_ELEMENTS ? tryResource(`/asset/${query}`) : null)
+        // SEQUENTIA: else a coin of the Ark, by its id (the explorer server's /ark-index)
+        .catch(_ => process.env.IS_ELEMENTS
+          ? request(`/ark-index/find/${query.toLowerCase()}`).then(r => r.ok ? `/ark/${query.toLowerCase()}` : Promise.reject('not found'))
+          : null)
         .catch(_ => null)
 
     // lookup as lightning-style short txout identifier

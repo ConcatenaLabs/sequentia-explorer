@@ -36,7 +36,27 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    | `WALLET_DIR` | `./wallet` | `/wallet` static mount (built SWK web wallet) |
 
    The proxied services are optional: if one is not running, only its path
-   returns errors. Every SeqOB relay needs its own mount: an offer is only
+   returns errors.
+
+   The Ark section reads `/ark-index/*`, which this server answers itself
+   (`ark-index.js`): it mirrors the rounds and batch trees the Ark operator
+   publishes and reads the chain through `SEQ_ELECTRS`.
+
+   | Variable | Default | Meaning |
+   |---|---|---|
+   | `ARCA_OPERATOR` | `http://127.0.0.1:3535` | The operator's base URL, the path its `/v1/` calls sit under (the testnet's public one is `https://sequentiatestnet.com/arca`) |
+   | `ARK_SYNC_SECONDS` | `30` | How often the mirror reads new rounds and those not final yet; every twentieth pass it reads every round's state again, since a Bitcoin reorganisation can take a final round out |
+   | `ARK_CALLS_PER_SECOND` | `8` | The most calls a second the mirror makes to the operator, whose public reads are budgeted per source |
+   | `ARK_MAX_ROUNDS` | `20000` | The most rounds kept in memory; the oldest go first |
+
+   Its first pass reads every round and tree, about two and a half minutes
+   per thousand rounds at the default rate; until it ends, a lookup it cannot
+   answer yet says so. Its calls: `GET /ark-index/status` (the mirror),
+   `/ark-index/rounds?limit=N` (the latest rounds), `/ark-index/round/:id`
+   (a round by txid or number, its batches and how each stands on the chain),
+   `/ark-index/coin/:leaf_id` (a coin, or a board through the operator's
+   `board_status`), `/ark-index/find/:q` (whichever of those `q` is) and
+   `/ark-index/tx/:txid` (what a transaction is to the Ark). Every SeqOB relay needs its own mount: an offer is only
    liftable against the relay holding it, so a relay without a mount shows
    up in the merged book and fails to lift.
    `/faucet` is proxied too (`SEQ_FAUCET`, default `127.0.0.1:9960`), to the

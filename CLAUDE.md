@@ -26,14 +26,17 @@ node serve-public.js            # default :8080
 automated tests are:
 
 ```sh
-node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs ark-index.test.mjs
 ```
 
 `feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `parent-forks.test.mjs` covers
 `competingBranches` in `parent-forks.js`; `chainstatus.test.mjs` covers the chain verdict in
 `chainstatus.js`; `contract-labels.test.mjs`
 covers the contract labels in `esplora/client/src/lib/contracts.js` on recorded regtest
-transactions. `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
+transactions. `ark-index.test.mjs` covers the Ark mirror and labels in `ark-index.js` on answers
+recorded from the public testnet's operator and API (`test/fixtures/ark-live.json`) and on the
+Arca covenant's golden vectors of a board (`test/fixtures/ark-board.json`, made by
+`test/make-ark-board-fixture.mjs`). `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
 electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six
 environment variables name the binaries; its header lists them. `contract-views.regtest.test.mjs`
 does the same for the decoded contract views, on a vault the contracts harness drives. Both build
@@ -77,6 +80,12 @@ the registry-index label (`lib/contracts.js`) as the fallback for an indexer wit
   or fixtures are dead.
 
 ## How the pieces connect
+
+- `/ark-index` is this server's own: `ark-index.js` mirrors the rounds and batch trees the Ark
+  operator publishes (its public `rounds`, `tree` and `board_status` calls, under
+  `ARCA_OPERATOR`) and reads what the chain shows of them from the Sequentia electrs. The Ark
+  section (`views/ark.js`) and the label on a transaction's page read it. The operator's
+  product name is never shown on a page: the section and its labels say "Ark".
 
 - `/wallet` is an `express.static` mount of `WALLET_DIR` (default `./wallet`). There is no
   submodule and no build-time coupling to

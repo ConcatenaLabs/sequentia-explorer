@@ -30,9 +30,10 @@ import * as views from './views'
 const apiBase = (process.env.API_URL || '/api').replace(/\/+$/, '')
     // '/registry/...' (Asset Registry) and '/prices' (market-data feed) are origin-absolute
     // mounts, not electrs API paths — pass them through instead of prefixing apiBase (404).
-    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') || path.startsWith('/registry') || path.startsWith('/prices') ? path : apiBase + path })
+    // SEQUENTIA: '/ark-index' is the explorer server's own reading of the Ark (ark-index.js), same-origin too.
+    , setBase = ({ path, ...r }) => ({ ...r, url: path.includes('://') || path.startsWith('./') || path.startsWith('/registry') || path.startsWith('/prices') || path.startsWith('/ark-index') ? path : apiBase + path })
 
-const reservedPaths = [ 'mempool', 'assets', 'search', 'settings' ]
+const reservedPaths = [ 'mempool', 'assets', 'search', 'settings', 'ark' ]
     , NEW_TABLE_ENTRY_MS = 2000
 
 // Make driver source observables rxjs5-compatible via rxjs-compat
@@ -103,6 +104,10 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   // SEQUENTIA: a contract instance (its commitment root and its parameters),
   // and every spend of one commitment root
   , goContract$ = route('/contract/:leaf/:instance').map(loc => loc.params).filter(p => isHash256(p.leaf) && /^[0-9a-f]+$/.test(p.instance))
+  // SEQUENTIA: the Ark section: a round (by its txid or number) or a coin (by its id), or
+  // the latest rounds when nothing is asked
+  , goArk$ = !process.env.IS_ELEMENTS ? O.empty() : O.merge(route('/ark').mapTo(''), route('/ark/:q').map(loc => String(loc.params.q).trim().toLowerCase().slice(0, 100)))
+  , isArkQuery = q => /^(\d{1,12}|[0-9a-f]{64})$/.test(q)
   , goContractRoot$ = route('/contract/:leaf').map(loc => ({ leaf: loc.params.leaf, after: loc.query.after }))
       .filter(p => isHash256(p.leaf) && (p.after == null || /^[0-9a-f]{80}$/.test(p.after)))
 
@@ -130,6 +135,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     , route('/:q([a-zA-Z0-9]+)').map(loc => loc.params.q).filter(q => !reservedPaths.includes(q))
     , scan$
     )
+  , arkSearch$ = on('.ark-search', 'submit', { preventDefault: true }).map(e => String(e.ownerTarget.querySelector('[name=q]').value || '').trim().toLowerCase()).filter(Boolean)
 
   // auto-expand when opening with "#expand"
   , expandTx$ = route('/tx/:txid').filter(loc => loc.query.expand).map(loc => loc.params.txid)
@@ -237,6 +243,12 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   , contract$ = reply('contract').merge(goContract$.mapTo(null))
   , contractRoot$ = reply('contract-root').merge(goContractRoot$.mapTo(null))
 
+  // SEQUENTIA: what a transaction is to the Ark (its label), and the Ark page's answer;
+  // a failed lookup reads as nothing found, not as an error page
+  , arkTx$ = reply('ark-tx').merge(goTx$.mapTo(null)).startWith(null)
+  , arkFind$ = O.merge(reply('ark-find'), extractErrors(HTTP.select('ark-find')).map(e => ({ kind: 'none', status: e.status || null, syncing: !!(e.message && e.message.syncing) })), goArk$.map(q => !q || isArkQuery(q) ? null : { kind: 'none', status: 400 })).startWith(null)
+  , arkRounds$ = O.merge(reply('ark-rounds'), extractErrors(HTTP.select('ark-rounds')).mapTo({ rounds: [], error: true })).startWith(null)
+
   // Currently collapsed tx/block ("details")
   , openTx$ = togTx$.startWith(null).scan((prev, txid) => prev == txid ? null : txid)
   , openBlock$ = togBlock$.startWith(null).scan((prev, blockhash) => prev == blockhash ? null : blockhash)
@@ -324,6 +336,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                   , asset$.filter(notNully).mapTo('asset')
                   , contract$.filter(notNully).mapTo('contract')
                   , contractRoot$.filter(notNully).mapTo('contractRoot')
+                  , goArk$.mapTo('ark')
                   , goPush$.mapTo('pushtx')
                   , goScan$.mapTo('scan')
                   , goSettings$.mapTo('settings')
@@ -342,6 +355,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                    , asset$.filter(notNully).withLatestFrom(t$, (asset, t) => t`Asset: ${asset.asset_id}`)
                    , contract$.filter(notNully).withLatestFrom(t$, (c, t) => t`Contract: ${c.template ? c.template.name : c.leaf_id}`)
                    , contractRoot$.filter(notNully).withLatestFrom(t$, (c, t) => t`Commitment root: ${c.leaf_id}`)
+                   , goArk$.withLatestFrom(t$, (q, t) => q ? t`Ark: ${q}` : t`Ark`)
                    , goAssetList$.withLatestFrom(t$, (_, t) => t`Registered assets`)
                    , goPush$.withLatestFrom(t$, (_, t) => t`Broadcast transaction`)
                    , goMempool$.withLatestFrom(t$, (_, t) => t`Mempool`)
@@ -355,6 +369,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
                      , goBlock$, block$, blockStatus$, blockTxs$, nextBlockTxs$, prevBlockTxs$, openBlock$
                      , mempool$, mempoolRecent$, feeEst$
                      , tx$, txAnalysis$, openTx$, txContracts$, contract$, contractRoot$
+                     , arkTx$, goArk$, arkFind$, arkRounds$
                      , goAddr$, addr$, addrTxs$, addrQR$
                      , assetMap$, contractMap$, prices$, assetList$, goAssetList$, goAsset$, asset$, assetTxs$, unblinded$
                      , isReady$, loading$, page$, view$, title$
@@ -387,6 +402,10 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
     // SEQUENTIA: a contract instance, and a commitment root's spends
     , goContract$.map(p     => ({ category: 'contract',   method: 'GET', path: `/contracts/${p.leaf}/instance/${p.instance}` }))
+    // SEQUENTIA: the Ark's label of a transaction, in the background; the Ark page's lookup
+    , goTx$.filter(_ => !!process.env.IS_ELEMENTS).map(txid => ({ category: 'ark-tx', method: 'GET', path: `/ark-index/tx/${txid}`, bg: true }))
+    , goArk$.filter(isArkQuery).map(q => ({ category: 'ark-find', method: 'GET', path: `/ark-index/find/${q}`, bg: true }))
+    , goArk$.filter(q => !q).map(_ => ({ category: 'ark-rounds', method: 'GET', path: '/ark-index/rounds?limit=10', bg: true }))
     , goContractRoot$.map(p => ({ category: 'contract-root', method: 'GET', path: `/contracts/${p.leaf}/spends${p.after ? `?after=${p.after}` : ''}` }))
 
     // fetch address and its txs
@@ -510,6 +529,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
     , pushedtx$.map(txid => ({ type: 'push', pathname: `/tx/${txid}` }))
     , updateQuery$.map(([ pathname, hash, qs ]) => ({ type: 'replace', pathname, hash, search: qs, state: { noRouting: true } }))
     , searchQuery$.map(q => ({ type: 'push', pathname: '/search', search: `q=${encodeURIComponent(q)}` }))
+    , arkSearch$.map(q => ({ type: 'push', pathname: `/ark/${encodeURIComponent(q)}` }))
   )
 
   dbg({ goBlocks$, goBlock$, goTx$, goAddr$, togTx$, page$, lang$, vdom$, moreBlocks$

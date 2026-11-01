@@ -1,6 +1,6 @@
 import layout from './layout'
 import { formatTime, formatAssetAmount } from './util'
-import { contractLink, templateName, roleValue, stateList, costLine, rootHref } from './contract-parts'
+import { contractLink, templateName, roleValue, stateList, costLine, rootHref, amountAssetOf } from './contract-parts'
 
 // SEQUENTIA: a page per contract instance, from sequentia-electrs'
 // GET /contracts/:root/instance/:params: the template, its terms, the coins it
@@ -53,7 +53,9 @@ const spendRow = (e, S) => {
 
 export const contract = ({ t, contract: c, ...S }) => {
   if (!c) return;
-  const tpl = c.template, opt = { t, ...S }
+  const tpl = c.template
+      , firstState = c.chains && c.chains[0] && c.chains[0][0] && c.chains[0][0].input && c.chains[0][0].input.state
+      , opt = { t, ...S, amountAsset: amountAssetOf(c.terms, firstState) }
   return layout(
     <div className="container contract-page">
       <h1 className="font-h2">{tpl ? templateName(tpl) : t`Contract`}</h1>
@@ -73,6 +75,7 @@ export const contract = ({ t, contract: c, ...S }) => {
         : <p><em>{t`No unspent coin of this contract is known: its last spend did not re-create it, or the coin that holds it now has not been spent since it was made, and only a spend reveals a contract's terms.`}</em></p> }
 
       <h2 className="font-h3">{t`Spends`}</h2>
+      { c.truncated && <p><em>{t`This contract's commitment root has more spends than the indexer reads for one page, so later spends of this instance may be missing below.`}</em></p> }
       { c.chains.map((chain, n) => <div className="contract-chain">
           <h3 className="font-p1">{t`Coin ${n + 1}`}{chain.length ? [ ' · ', t`made by`, ' ', <a href={`tx/${chain[0].prevout.txid}?output:${chain[0].prevout.vout}`} className="mono">{chain[0].prevout.txid.slice(0, 16)}…</a> ] : ''}</h3>
           { chain.map(e => spendRow(e, opt)) }
@@ -83,6 +86,7 @@ export const contract = ({ t, contract: c, ...S }) => {
 
 export const contractRoot = ({ t, contractRoot: r, ...S }) => {
   if (!r) return;
+  const after = S.page && S.page.query && S.page.query.after
   const instances = {}
   r.spends.forEach(s => { const k = s.instance || ''; (instances[k] = instances[k] || []).push(s) })
   return layout(
@@ -92,14 +96,19 @@ export const contractRoot = ({ t, contractRoot: r, ...S }) => {
       <p>{r.templates.length
         ? [ t`The program of`, ' ', r.templates.map((x, i) => [ i ? ', ' : '', contractLink({ template_hash: x.hash }, templateName(x)), ` (${x.leaf})` ]) ]
         : t`No verified template in the registry has this root, so its spends are shown unnamed.`}</p>
-      <h2 className="font-h3">{t`Spends`} ({r.spends.length}{r.spends.length >= r.limit ? '+' : ''})</h2>
+      <h2 className="font-h3">{after ? t`More spends` : t`Spends`} ({r.spends.length}{r.next ? '+' : ''})</h2>
       { Object.keys(instances).map(k => <div className="contract-chain">
           { k && <h3 className="font-p1"><a href={`contract/${r.leaf_id}/${k}`}>{t`Instance`} {k.slice(0, 16)}… &rarr;</a></h3> }
           { instances[k].map(s => <div className="contract-spend-head">
               {s.path || t`spend`} · <a href={`tx/${s.txid}?input:${s.vin}&expand`} className="mono">{s.txid.slice(0, 16)}…:{s.vin}</a> · {when(s.status, t)}
-              {s.state && s.state.length > 0 && [ ' · ', s.state.map((v, i) => [ i ? ', ' : '', `${v.name} `, roleValue(v, { t, ...S }) ]) ]}
+              {s.state && s.state.length > 0 && [ ' · ', s.state.map((v, i) => [ i ? ', ' : '', `${v.name} `, roleValue(v, { t, ...S, amountAsset: amountAssetOf(s.state) }) ]) ]}
             </div>) }
         </div>) }
+      { (r.next || after) && <p className="contract-pages">
+          { after && <a href={`contract/${r.leaf_id}`}>&larr; {t`First spends`}</a> }
+          { after && r.next && ' · ' }
+          { r.next && <a href={`contract/${r.leaf_id}?after=${r.next}`}>{t`Later spends`} &rarr;</a> }
+        </p> }
     </div>
   , { t, ...S })
 }

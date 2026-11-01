@@ -1,4 +1,7 @@
-import { formatTime, formatAssetAmount, formatNumber } from './util'
+import { formatTime, formatAssetValue, formatNumber } from './util'
+import { amountAssetOf } from '../lib/contracts'
+
+export { amountAssetOf }
 
 // The registry's record of a template, beside its contract index.
 const contractBase = (process.env.CONTRACT_MAP_URL || '').replace(/\/index\.minimal\.json$/, '')
@@ -16,9 +19,10 @@ const reverseHex = h => h.match(/../g).reverse().join('')
 const bigOf = h => BigInt('0x' + (h || '0'))
 
 // A parameter or slot, shown by its role (docs/descriptor.md in
-// sequentia-contracts): an asset by its ticker, a time as a date, a relative
-// lock as the delay it sets, a key or hash as hex.
-export const roleValue = (v, { assetMap, t }) => {
+// sequentia-contracts): an asset by its ticker, an amount in that asset's
+// units, a time as a date, a relative lock as the delay it sets, a key or hash
+// as hex.
+export const roleValue = (v, { assetMap, amountAsset, t }) => {
   const n = bigOf(v.hex)
   switch (v.role) {
     case 'asset': {
@@ -27,7 +31,9 @@ export const roleValue = (v, { assetMap, t }) => {
       const id = reverseHex(v.hex), meta = assetMap && assetMap[id]
       return <span><a href={`asset/${id}`} className="mono">{meta && meta[1] ? `${meta[1]} ` : ''}{id}</a></span>
     }
-    case 'amount': return <span>{formatNumber(n.toString())} <em className="text-gray">{t`atoms`}</em></span>
+    case 'amount': return amountAsset
+      ? <span>{formatAssetValue(amountAsset, n.toString(), assetMap)}</span>
+      : <span>{formatNumber(n.toString())} <em className="text-gray">{t`atoms`}</em></span>
     case 'time': return n == BigInt(0) ? <span>0</span>
       : n < BigInt(500000000) ? <span>{t`block`} {n.toString()}</span>
       : <span>{formatTime(Number(n))} <em className="text-gray">({n.toString()})</em></span>
@@ -96,9 +102,10 @@ const witnessRows = (d, S) => {
 }
 
 // The rows a decoded contract input adds to the input's details.
-export const decodedInputRows = (d, S) => {
-  const { t } = S
+export const decodedInputRows = (d, S0) => {
+  const { t } = S0
   if (!d) return null
+  const S = { ...S0, amountAsset: amountAssetOf(d.terms, d.state) }
   return [
     <div className="vin-body-row">
       <div>{t`Contract`}</div>
@@ -152,9 +159,11 @@ export const decodedInputRows = (d, S) => {
 }
 
 // The line under an output that carries an input's contract on.
+// `S.decodedIn` is the input it continues, whose terms name the asset its amounts count.
 export const decodedOutputBadge = (o, t, S) => o && <span className="contract-label">
   {t`Next state of input #${o.successor_of}`} · {o.template ? templateName(o.template) : ''}
-  {o.state && o.state.length ? [ ': ', ...o.state.map((v, i) => [ i ? ', ' : '', `${v.name} `, roleValue(v, { t, ...S }) ]) ] : ''}
+  {o.state && o.state.length ? [ ': ', ...o.state.map((v, i) => [ i ? ', ' : '', `${v.name} `,
+    roleValue(v, { t, ...S, amountAsset: amountAssetOf(S.decodedIn && S.decodedIn.terms, S.decodedIn && S.decodedIn.state, o.state) }) ]) ] : ''}
 </span>
 
 export const stateList = (list, S) => list && list.length > 0

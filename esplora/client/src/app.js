@@ -103,7 +103,8 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
   // SEQUENTIA: a contract instance (its commitment root and its parameters),
   // and every spend of one commitment root
   , goContract$ = route('/contract/:leaf/:instance').map(loc => loc.params).filter(p => isHash256(p.leaf) && /^[0-9a-f]+$/.test(p.instance))
-  , goContractRoot$ = route('/contract/:leaf').map(loc => loc.params.leaf).filter(isHash256)
+  , goContractRoot$ = route('/contract/:leaf').map(loc => ({ leaf: loc.params.leaf, after: loc.query.after }))
+      .filter(p => isHash256(p.leaf) && (p.after == null || /^[0-9a-f]{80}$/.test(p.after)))
 
   // Elements only
   , goAsset$ = !process.env.IS_ELEMENTS ? O.empty() : route('/asset/:asset_id').map(loc => ({
@@ -386,7 +387,7 @@ export default function main({ DOM, HTTP, route, storage, scanner: scan$, search
 
     // SEQUENTIA: a contract instance, and a commitment root's spends
     , goContract$.map(p     => ({ category: 'contract',   method: 'GET', path: `/contracts/${p.leaf}/instance/${p.instance}` }))
-    , goContractRoot$.map(l => ({ category: 'contract-root', method: 'GET', path: `/contracts/${l}/spends` }))
+    , goContractRoot$.map(p => ({ category: 'contract-root', method: 'GET', path: `/contracts/${p.leaf}/spends${p.after ? `?after=${p.after}` : ''}` }))
 
     // fetch address and its txs
     , goAddr$.flatMap(d     => [{ category: 'address',    method: 'GET', path: `/address/${d.addr}` }

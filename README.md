@@ -78,7 +78,11 @@ details, mempool), plus Sequentia-specific views:
   its path, cost, witness, the state it found, the outputs `2k` and `2k+1` it
   owns where the template uses them, and the next state it made, so a contract
   re-created at a new address on each spend is followed across every
-  re-creation. `/explorer/contract/<root>` lists every spend of a root.
+  re-creation. `/explorer/contract/<root>` lists the spends of a root, a page
+  at a time, with a link to the later ones. An amount in a contract's terms or
+  state is shown in its asset's units when the contract's values name exactly
+  one asset, and in atoms when they name two (a loan's debt and collateral, a
+  sale's token and payment), since nothing says which of the two it counts.
 - **Per-asset amounts and any-asset fees.** Sequentia has an open fee market:
   a transaction fee can be paid in any accepted asset, so fee rates are shown
   in the fee asset's own base units per vByte (never "sat/vB", which is

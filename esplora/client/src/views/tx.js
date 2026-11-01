@@ -83,7 +83,8 @@ export const txBox = (tx, { t, openTx, tipHeight, spends, query, unblinded, txCo
 
 
       <div className="vouts">{tx.vout.map((out, index) =>
-        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index), contract: contractOuts[index], decoded: decoded && decoded.outputs[index] }))}
+        voutView(out, { ...vopt, index, spend: findSpend(spends, tx.txid, index), contract: contractOuts[index], decoded: decoded && decoded.outputs[index]
+                      , decodedIn: decoded && decoded.outputs[index] && decoded.inputs[decoded.outputs[index].successor_of] }))}
       </div>
     </div>
     <div className="footer">

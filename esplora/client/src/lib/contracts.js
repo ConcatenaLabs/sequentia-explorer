@@ -58,3 +58,16 @@ export const contractOutputs = (tx, map, inputs = contractInputs(tx, map)) => (t
 
 // What a label reads as.
 export const contractName = c => c.candidates ? c.candidates.map(x => x.name).join(' or ') : `${c.name} v${c.version}`
+
+// The asset a contract's amounts are counted in: the one asset among its terms
+// and state (values of role `asset`, which a program holds in internal byte
+// order), when there is exactly one. A template whose values name two assets (a
+// loan's debt and collateral, a sale's token and payment) leaves an amount in
+// atoms, since nothing says which of the two it counts.
+export const amountAssetOf = (...lists) => {
+  const ids = new Set()
+  lists.forEach(l => (l || []).forEach(v => {
+    if (v && v.role == 'asset' && /^[0-9a-f]{64}$/.test(v.hex || '')) ids.add(v.hex.match(/../g).reverse().join(''))
+  }))
+  return ids.size == 1 ? [ ...ids ][0] : null
+}

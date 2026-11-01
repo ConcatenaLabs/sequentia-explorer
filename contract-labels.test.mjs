@@ -6,7 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { contractInputs, contractOutputs, contractName, revealedLeaf } from './esplora/client/src/lib/contracts.js'
+import { contractInputs, contractOutputs, contractName, revealedLeaf, amountAssetOf } from './esplora/client/src/lib/contracts.js'
 
 const fixture = name => JSON.parse(readFileSync(new URL(`./test/fixtures/${name}.json`, import.meta.url), 'utf8'))
 const index = fixture('contract-index')
@@ -68,4 +68,23 @@ test('a key-path or non-Simplicity spend reveals no Simplicity root', () => {
   assert.equal(revealedLeaf(tapscript).version, 0xc4)
   const annexed = [...drip.vin[0].witness, '50aa']
   assert.equal(revealedLeaf(annexed).script, CMR)
+})
+
+// A live faucet drip decoded by the public indexer: its terms name one asset,
+// so its amounts are counted in it; the asset id comes back in display order.
+test('a contract whose values name one asset counts its amounts in it', () => {
+  const d = fixture('drip-live-contracts').inputs[0]
+  const asset = d.terms.find(v => v.name == 'ASSET')
+  assert.equal(amountAssetOf(d.terms, d.state), asset.hex.match(/../g).reverse().join(''))
+  assert.equal(amountAssetOf(d.terms, d.state).length, 64)
+})
+
+test('a contract whose values name two assets leaves its amounts in atoms', () => {
+  const one = { name: 'ASSET', role: 'asset', hex: 'aa'.repeat(32) }
+  const two = { name: 'TOKEN', role: 'asset', hex: 'bb'.repeat(32) }
+  const amount = { name: 'ALLOWANCE', role: 'amount', hex: '00000000000186a0' }
+  assert.equal(amountAssetOf([one, two, amount]), null)
+  assert.equal(amountAssetOf([one, amount], [{ ...one }]), 'aa'.repeat(32))   // the same asset twice is one
+  assert.equal(amountAssetOf([amount]), null)
+  assert.equal(amountAssetOf(null, undefined), null)
 })

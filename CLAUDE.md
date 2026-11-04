@@ -39,8 +39,10 @@ Arca covenant's golden vectors of a board (`test/fixtures/ark-board.json`, made 
 `test/make-ark-board-fixture.mjs`). `contract-labels.regtest.test.mjs` runs the labels end to end (a local chain,
 electrs, the registry, a build served by `serve-public.js`, headless Chromium) when its six
 environment variables name the binaries; its header lists them. `contract-views.regtest.test.mjs`
-does the same for the decoded contract views, on a vault the contracts harness drives. Both build
-into `esplora/dist/explorer`. There is no CI.
+does the same for the decoded contract views, on a vault the contracts harness drives.
+`tx-finality.regtest.test.mjs` renders the finality rows of a transaction and its block; it runs
+inside sequentia-electrs' `electrs/tests/regtest/tx_finality_reorg.py` (its `EXPLORER_CHECK`), which
+supplies the chain and the indexer. All three build into `esplora/dist/explorer`. There is no CI.
 
 `deploy/systemd/` holds the three units (the server plus the two electrs instances) and
 `deploy/README.md` documents the environment variables and install steps.

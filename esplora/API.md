@@ -69,8 +69,39 @@ Block objects (`GET /block/:hash`, `GET /blocks`) carry additional fields:
   solution decodes as a BLS committee certificate; omitted otherwise.
 - `finalized` *(optional, `GET /block/:hash` only)*: declared as "whether the
   block is checkpoint-finalized", but the current indexer never sets it
-  (`/block` is served purely from the index with no node RPC). Read finality
-  from `GET /sequentia/checkpoints` instead.
+  (`/block` is served purely from the index with no node RPC). Read a block's
+  certification from `GET /block/:hash/status` (below) and checkpoint
+  finality from `GET /sequentia/checkpoints`.
+
+### Finality on a status
+
+A block the staking committee certified cannot be replaced by any competing
+Sequentia block; it is still undone whenever Bitcoin reorganises away the block
+it is anchored to, however deep. A confirmed transaction status (`GET
+/tx/:txid/status`, the `status` of every transaction object and of a spend in
+`/tx/:txid/outspend(s)`) and `GET /block/:hash/status` for a block in the best
+chain carry:
+
+- `bitcoin_anchor`: `{ "height", "hash", "depth" }`, the Bitcoin block it is
+  anchored to and how many Bitcoin blocks deep it is, counted up to the one the
+  newest Sequentia block is anchored to (the newest anchor is depth 1).
+- `certification` *(optional; absent while the indexer's node cannot answer)*:
+  `{ "certified", "signers", "quorum" }`, whether the committee certified the
+  block, how many signatures it carries and how many it needed.
+
+```json
+{"confirmed":true,"block_height":7315,"block_hash":"...","block_time":1730000000,
+ "bitcoin_anchor":{"height":143437,"hash":"...","depth":3},
+ "certification":{"certified":true,"signers":12,"quorum":11}}
+```
+
+Such answers are cached for 10 seconds only, whatever their depth.
+
+### Transaction fee
+
+A transaction's `fee` is the amount in `fee_asset`, the asset its fee output
+pays in. A transaction paying fees in several assets also carries `fees`, one
+`{ "asset", "value" }` per asset.
 
 Sequentia blocks are certified by a proof-of-stake committee, so the PoW
 fields (`bits`, `nonce`, `difficulty`) are absent; the raw block proof is

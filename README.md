@@ -41,18 +41,22 @@ Everything upstream Esplora shows (blocks, transactions, addresses, script
 details, mempool), plus Sequentia-specific views:
 
 - **Bitcoin anchor per block.** Every Sequentia block commits to a Bitcoin
-  testnet4 block header; the block page shows the anchor (height + hash) and
-  links it to the built-in testnet4 explorer, so you can follow a Sequentia
-  block down to its Bitcoin anchor in one click
+  testnet4 block header; the block page shows the anchor's height and how many
+  Bitcoin blocks deep it is, and links it to the built-in testnet4 explorer,
+  so you can follow a Sequentia block down to its Bitcoin anchor in one click
   (`esplora/client/src/views/block.js`).
+- **Finality of a block and of a transaction.** The block page and every
+  transaction page say in words whether the block was certified by the
+  staking committee, which means no competing Sequentia block can replace it,
+  and that it is still undone if Bitcoin drops the block it is anchored to
+  (`esplora/client/src/views/finality.js`, from the indexer's `certification`
+  and `bitcoin_anchor` status fields). A block below the committee's quorum
+  reads "Not certified", with the signatures it had and needed.
 - **Proof-of-stake committee certificate.** When a block's proof solution
   carries a decodable BLS committee certificate, the block page shows how
   many committee members signed it (`pos_certificate.signer_count`; the
   certificate also carries `leader_sig`, `agg_sig` and, on the current
-  chain, the `signer_bitfield`). A "Finality" row is wired to the optional
-  `finalized` block field, but the current indexer never populates that
-  field, so the row does not render; finality is served separately by
-  `GET /api/sequentia/checkpoints`.
+  chain, the `signer_bitfield`).
 - **Issued assets.** The Assets tab lists issued assets; asset pages show
   issuance, supply, and transactions. Asset names, tickers, and display
   precision come from the Sequentia Asset Registry (`ASSET_MAP_URL`, served
@@ -206,7 +210,8 @@ The REST API is the Esplora HTTP API served by
 [`sequentia-electrs`](https://github.com/ConcatenaLabs/sequentia-electrs).
 `esplora/API.md` documents it, including the Sequentia-specific block fields
 (`bitcoin_anchor`, `pos_certificate`; `finalized` is declared but never
-populated), the Elements asset endpoints, `GET /api/sequentia/checkpoints`
+populated), the anchor and certification on transaction and block statuses,
+the fee's asset, the Elements asset endpoints, `GET /api/sequentia/checkpoints`
 and `GET /api/sequentia/anchorstatus`. Quick check:
 
 ```sh
@@ -235,7 +240,10 @@ curl -s https://sequentiatestnet.com/api/blocks/tip/height
   `contract-views.regtest.test.mjs` - the decoded contract views end to end: a
   vault taken, topped up, repaid and liquidated in part by the regtest harness
   of sequentia-contracts, indexed and decoded by sequentia-electrs, and its
-  transaction and contract pages rendered.
+  transaction and contract pages rendered;
+  `tx-finality.regtest.test.mjs` - the finality rows of a transaction page
+  and its block page, rendered against the electrs of sequentia-electrs'
+  regtest proof (`electrs/tests/regtest/tx_finality_reorg.py`), which calls it.
 - `run-sequentia-explorer.sh`, `run-testnet4-explorer.sh` - local dev servers.
 - `downloads/` - a copy of the `/download` page for a local run (built
   artifacts are dropped in at deploy time and are not committed). The pages
@@ -253,8 +261,8 @@ The fork keeps upstream's structure; the Sequentia work is concentrated in:
 - `esplora/flavors/bitcoin-testnet4/` - parent-chain flavor used by the
   second explorer.
 - `esplora/client/src/views/block.js` - Bitcoin anchor row, PoS committee
-  signer count, checkpoint-finality row (renders only if the API ever sets
-  `finalized`).
+  signer count; `views/finality.js` - the finality and anchor rows the block
+  and transaction pages share.
 - `esplora/client/src/views/tx.js`, `transactions.js`, `mempool.js` -
   per-asset values, any-asset fees, fee rates in the fee asset's own units
   per vByte.
@@ -288,13 +296,17 @@ SEQUENTIA_BIN=... FAUCET_DRIP=... ELECTRS=... REGISTRY_DIR=... SEQC=... CHROME=.
   node --test contract-labels.regtest.test.mjs
 SEQUENTIA_REPO=... CONTRACTS_DIR=... SEQC=... ELECTRS=... REGISTRY_DIR=... CHROME=... \
   node --test contract-views.regtest.test.mjs
+SEQUENTIA_REPO=... ELECTRS=... CHROME=... EXPLORER_CHECK="node --test $PWD/tx-finality.regtest.test.mjs" \
+  python3 <sequentia-electrs>/electrs/tests/regtest/tx_finality_reorg.py \
+  --configfile=<Sequentia>/test/config.ini --tmpdir=<dir>
 ```
 
-The last two need a built node, a sequentia-electrs binary built with
+The regtest ones need a built node, a sequentia-electrs binary built with
 `--features sequentia`, a registry checkout, `seqc` from sequentia-contracts
 and a Chromium; the first of them also the faucet's drip tool, the second a
 Sequentia checkout and a sequentia-contracts checkout for its regtest harness.
-Each header says which is which, and each is skipped without them. Other views have no
+The finality one needs a built Sequentia checkout, the electrs binary and a
+Chromium. Each header says which is which, and each is skipped without them. Other views have no
 automated coverage, so check them by clicking through the affected pages
 against a running API.
 

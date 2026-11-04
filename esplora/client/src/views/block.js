@@ -4,6 +4,7 @@ import { updateQuery } from '../util'
 import { formatTime, formatHex, formatNumber, linkToParentBlock } from './util'
 import { blockTxsPerPage as perPage } from '../const'
 import loader from '../components/loading'
+import { finalityRows } from './finality'
 
 
 const staticRoot = process.env.STATIC_ROOT || ''
@@ -59,22 +60,17 @@ export default ({ t, block: b, blockStatus: status, blockTxs, openTx, spends, op
           <div>{!status ? '' : !status.in_best_chain ? t`Orphaned` : tipHeight ? t`In best chain (${tipHeight-b.height+1} confirmations)` : t`In best chain`}</div>
         </div>
 
-        { /* SEQUENTIA: checkpoint finality (from getcheckpointinfo) */ }
-        { b.finalized != null &&
-          <div>
-            <div>{t`Finality`}</div>
-            <div>{ b.finalized
-              ? <span className="seq-finalized">{t`Finalized`}</span>
-              : <span className="seq-unfinalized">{t`Not yet finalized`}</span> }</div>
-          </div>
-        }
+        { /* SEQUENTIA: certification and the Bitcoin anchor's depth, from the
+             block's status; the transaction page shows the same rows (views/finality.js) */ }
+        { finalityRows(status, t`this block`, t) }
         <div>
           <div>{t`Timestamp`}</div>
           <div>{formatTime(b.timestamp)}</div>
         </div>
 
-        { /* SEQUENTIA: Bitcoin (testnet4) anchor for this block */ }
-        { b.bitcoin_anchor &&
+        { /* SEQUENTIA: Bitcoin (testnet4) anchor for this block, when the status
+             above does not carry it with its depth (a stale block) */ }
+        { b.bitcoin_anchor && !(status && status.bitcoin_anchor) &&
           <div>
             <div>{t`Bitcoin anchor`}</div>
             <div className="mono">

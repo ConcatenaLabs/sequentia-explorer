@@ -8,6 +8,7 @@ import { formatSat, formatTime, formatVMB, formatNumber, formatAssetValue, forma
 import { isAllUnconfidential, isAllNative, isRbf, outTotal, updateQuery } from '../util'
 import { nativeAssetId } from '../const'
 import { contractInputs, contractOutputs } from '../lib/contracts'
+import { finalityRows } from './finality'
 
 // Require behind env conditional so it gets removed by `envify` on non-elements builds
 const deduceBlinded = process.env.IS_ELEMENTS && require('../lib/deduce-blinded').deduceBlinded
@@ -147,10 +148,9 @@ const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices, arkTx
                       , txAnalysis: { feerate, mempoolDepth, confEstimate, overpaying, privacyAnalysis, segwitGains } }) => {
   const ark = arkTx && arkTx.txid == tx.txid && arkTx.role ? arkTx : null
 
-  // SEQUENTIA: fees may be paid in any asset (open fee market). The native-only
-  // `tx.fee`/`feerate` are 0/null for a non-native fee, which previously hid the
-  // fee line entirely. Read the explicit `fee`-type output to show the fee — and
-  // its per-vByte rate — in the asset it was actually paid in.
+  // SEQUENTIA: fees may be paid in any accepted asset (open fee market). Read the
+  // explicit `fee`-type output to show the fee, and its per-vByte rate, in the
+  // asset it was paid in (the indexer's `fee` and `fee_asset` say the same).
   const feeOut = process.env.IS_ELEMENTS ? (tx.vout || []).find(v => v.scriptpubkey_type === 'fee') : null
       , feeAsset = feeOut && feeOut.asset
       , feeAmount = process.env.IS_ELEMENTS ? (feeOut && feeOut.value) : tx.fee
@@ -182,6 +182,8 @@ const txHeader = (tx, { tipHeight, mempool, feeEst, t, assetMap, prices, arkTx
         <div>{t`Block timestamp`}</div>
         <div>{formatTime(tx.status.block_time)}</div>
       </div>
+    // SEQUENTIA: certification and the Bitcoin anchor, as the block page shows them
+    , ...finalityRows(tx.status, t`the block holding this transaction`, t)
     ]}
 
     { !tx.status.confirmed && feerate != null && <div>

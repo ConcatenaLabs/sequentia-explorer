@@ -108,7 +108,7 @@ adjust the paths, including the `node` binary in `concatena-explorer.service`,
 if your layout differs:
 
 - `concatena-electrs-seq.service`: the Sequentia electrs under its
-  crash-wiping supervisor (`run-electrs-supervised.sh`), with a persistent
+  restart-on-exit supervisor (`run-electrs-supervised.sh`), with a persistent
   database at `~/.local/share/concatena-explorer/seq-db`, reading contract
   templates from the registry at `http://127.0.0.1:3005`.
 - `concatena-electrs-t4.service`: the Bitcoin testnet4 electrs

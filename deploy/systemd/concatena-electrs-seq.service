@@ -4,8 +4,9 @@ After=network-online.target
 
 [Service]
 Type=simple
-# The supervisor loops electrs and wipes its DB on a crash, which is needed for
-# the churny chain=test node. Persistent DB path (not /tmp).
+# The supervisor restarts electrs whenever it exits, on the same database:
+# electrs undoes the rows of blocks that left the chain itself. Persistent DB
+# path (not /tmp).
 Environment=DB_DIR=%h/.local/share/concatena-explorer/seq-db
 # The registry whose verified templates name contract spends.
 Environment=CONTRACT_REGISTRY_URL=http://127.0.0.1:3005

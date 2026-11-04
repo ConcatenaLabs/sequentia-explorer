@@ -64,6 +64,11 @@ export const outTotal = tx =>
 export const isNativeOut = vout => (!vout.asset && !vout.assetcommitment) || vout.asset === nativeAssetId
 
 export const calculateFeerates = (tx, mempool, feeEst) => {
+  // SEQUENTIA: `fee` is in `fee_asset`, which may be any accepted asset; the
+  // fee estimates and the mempool histogram it is compared with are in the
+  // policy asset's units, so only a policy-asset fee gets a rate here. The
+  // transaction page shows every fee in its own asset (views/tx.js).
+  if (tx.fee_asset && tx.fee_asset !== nativeAssetId) return { tx, mempool, feeEst, feerate: null, discountFeerate: null, effectiveFeerate: null };
   const feerate = tx.fee ? tx.fee / tx.weight * 4 : null;
   const discountFeerate = tx.fee && tx.discount_vsize ? tx.fee / tx.discount_vsize : null;
   const effectiveFeerate = discountFeerate ? discountFeerate : feerate;

@@ -42,7 +42,9 @@ environment variables name the binaries; its header lists them. `contract-views.
 does the same for the decoded contract views, on a vault the contracts harness drives.
 `tx-finality.regtest.test.mjs` renders the finality rows of a transaction and its block; it runs
 inside sequentia-electrs' `electrs/tests/regtest/tx_finality_reorg.py` (its `EXPLORER_CHECK`), which
-supplies the chain and the indexer. All three build into `esplora/dist/explorer`. There is no CI.
+supplies the chain and the indexer. All three build into `esplora/dist/explorer`. CI (`.github/workflows/tests.yml`) runs the
+unit tests and `./build-public.sh` on every pull request and on `main`; the three regtest
+suites skip themselves there.
 
 `deploy/systemd/` holds the three units (the server plus the two electrs instances) and
 `deploy/README.md` documents the environment variables and install steps.

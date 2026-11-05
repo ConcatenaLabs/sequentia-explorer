@@ -1,0 +1,43 @@
+# The unit tests and the frontend build on every pull request and on main, on Node 18, the Node
+# the testnet server runs serve-public.js and builds the explorers with. The build is the check
+# CLAUDE.md asks of every frontend change (`./build-public.sh` must succeed).
+#
+# Not run here, by design (CLAUDE.md, "Run and test"):
+# - SKIPPED (needs a sequentiad, electrs and a browser): contract-labels.regtest.test.mjs,
+#   contract-views.regtest.test.mjs and tx-finality.regtest.test.mjs skip themselves without
+#   the variables that name those binaries.
+name: tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm install --no-audit --no-fund
+      - run: node --test '*.test.mjs'
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: |
+            esplora/npm-shrinkwrap.json
+            esplora/client/package.json
+      - name: install the frontend's dependencies
+        working-directory: esplora
+        run: npm install --no-audit --no-fund
+      - run: ./build-public.sh
+      - run: test -s esplora/dist/explorer/index.html && test -s esplora/dist/testnet4/index.html

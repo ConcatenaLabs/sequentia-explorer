@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '18'
       - run: npm install --no-audit --no-fund
-      - run: node --test '*.test.mjs'
+      - run: node --test *.test.mjs   # the shell expands it: Node 18's runner takes no glob
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

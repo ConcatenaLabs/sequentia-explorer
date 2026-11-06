@@ -154,22 +154,24 @@ ${keys.map((k) => `      ${tile(DEST[k])}`).join('\n')}
 // The public front door. To start visitors somewhere else, change `featured`.
 const ROOT = {
   heading: 'Testnet',
-  featured: 'wallet',
+  featured: 'emissio',
   groups: [
-    ['Get coins and explore', ['wallet', 'faucet', 'bridge', 'explorer']],
-    ['Stake, earn and run a node', ['pools', 'emissio', 'core']],
+    ['Wallet and test coins', ['wallet', 'faucet', 'bridge']],
+    ['Explore, stake and run a node', ['explorer', 'pools', 'core']],
+    ['Earn', ['emissio']],
   ],
 }
 // Everything the box serves.
 const FULL_MENU = {
   heading: 'Everything on the testnet',
-  featured: 'wallet',
+  featured: 'emissio',
   noindex: true,
   groups: [
-    ['Wallets and coins', ['wallet', 'faucet', 'bridge', 'downloads']],
+    ['Wallets and coins', ['wallet', 'faucet', 'bridge']],
     ['Trade and borrow', ['dex', 'lending', 'liquidity']],
     ['Issue and raise', ['seqpal', 'seqpalId', 'levo']],
-    ['Stake, earn and explore', ['pools', 'emissio', 'explorer']],
+    ['Explore, stake and download', ['explorer', 'pools', 'downloads']],
+    ['Earn', ['emissio']],
   ],
 }
 

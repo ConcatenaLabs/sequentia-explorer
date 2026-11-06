@@ -36,15 +36,15 @@ test('each destination is linked once, the featured one as the only button', () 
     for (const p of paths) assert.strictEqual(count(html, p), 1, p)
     assert.strictEqual((html.match(/class="tile featured"/g) || []).length, 1)
     assert.strictEqual((html.match(/class="btn"/g) || []).length, 1)
-    assert.match(html, /<a class="tile featured" href="\/wallet\/">/)
+    assert.match(html, /<a class="tile featured" href="\/emissio\/">/)
   }
 })
 
 test('the featured destination is an argument: moving it keeps every destination, once', () => {
-  const html = menuPage({ ...ROOT, featured: 'emissio' })
-  assert.match(html, /<a class="tile featured" href="\/emissio\/">/)
+  const html = menuPage({ ...ROOT, featured: 'wallet' })
+  assert.match(html, /<a class="tile featured" href="\/wallet\/">/)
   for (const p of ROOT_PATHS) assert.strictEqual(count(html, p), 1, p)
-  assert.match(html, /<span class="btn">Open Emissio<\/span>/)
+  assert.match(html, /<span class="btn">Open the web wallet<\/span>/)
 })
 
 test('the front page names no hidden product; the full menu is noindex and the front page is not', () => {

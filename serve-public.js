@@ -11,6 +11,7 @@
 const express = require('express')
 const { intersectAtMinimum, combineFeeInfo } = require('./feerates')
 const { competingBranches } = require('./parent-forks')
+const { ROOT_HTML, FULL_MENU_HTML } = require('./menus')
 const http = require('http')
 const path = require('path')
 
@@ -586,94 +587,8 @@ app.get('/ark-index/tx/:txid', (req, res) => {
   }))
 })
 
-// The two menu pages. The site root is the public front door: the network's
-// one-line description, then the cards in the order a newcomer needs them. The
-// first, the web wallet, is the featured card: it is where a newcomer starts
-// (open it, take test coins from its faucet card), so it is highlighted and
-// carries the button, rather than appearing twice. Then the faucet, the
-// explorer, Emissio, the Compages bridge, the staking pools and the Sequentia
-// Core download. Everything else the box serves is listed on the
-// full menu at /secretfullmenu, which nothing links to: it is for people who
-// have been given the path. The product paths themselves are unchanged, since
-// the wallets, the extension and the nodes carry them hardcoded. One shell
-// renders both, so they are the same page with a different list. The cards sit in a grid, three
-// across on a wide screen and one column on a phone, so neither page is a long scroll; the featured
-// card spans the whole row.
-const menuPage = ({ cards, noindex, featured }) => `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sequentia: testnet demo server</title>${noindex ? '\n<meta name="robots" content="noindex">' : ''}
-<link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
-<style>
-  :root{color-scheme:dark}
-  body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f1216;color:#e8eaed;display:flex;min-height:100vh;align-items:center;justify-content:center}
-  .wrap{max-width:1120px;padding:48px 24px;width:100%;box-sizing:border-box}
-  .brand{display:flex;align-items:center;gap:14px;margin:0 0 8px}
-  .brand img{height:52px;width:52px}
-  h1{font-size:30px;margin:0} h1 .t{color:#f5b301}
-  .sub{color:#9aa0a6;margin:0 0 32px;max-width:720px}
-  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
-  a.card{display:block;text-decoration:none;color:inherit;background:#171b21;border:1px solid #262b33;border-radius:12px;padding:20px 22px;transition:border-color .15s,transform .05s}
-  a.card:hover{border-color:#f5b301;transform:translateY(-1px)}
-  .card h2{margin:0 0 4px;font-size:19px;color:#fff} .card p{margin:0;color:#9aa0a6;font-size:14px}
-  a.card.featured{grid-column:1/-1;background:#1d1a0e;border-color:#f5b301;padding:22px 24px}
-  a.card.featured:hover{border-color:#ffc933}
-  .featured .k{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#f5b301;font-weight:600}
-  .featured h2{font-size:21px} .featured p.d{color:#e8eaed;font-size:15px;margin:0 0 16px;max-width:720px}
-  .featured .btn{display:inline-block;background:#f5b301;color:#0f1216;font-weight:600;border-radius:8px;padding:10px 18px}
-  a.card.featured:hover .btn{background:#ffc933}
-  footer{margin-top:32px;border-top:1px solid #262b33;padding-top:20px;color:#6b7280;font-size:13px}
-  .by{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
-  .by span{color:#9aa0a6} .by a{color:#f5b301;text-decoration:none} .by a:hover{text-decoration:underline}
-  .by img{height:18px;width:auto;vertical-align:middle;opacity:.92}
-</style></head><body><div class="wrap">
-  <div class="brand">
-    <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
-    <h1>Sequentia <span class="t">testnet</span></h1>
-  </div>
-  <p class="sub">A Bitcoin sidechain for asset tokenization and disintermediated exchanges. This is its public testnet.</p>
-  <div class="grid">${featured ? `
-    <a class="card featured" href="${featured[0]}"><p class="k">Start here</p><h2>${featured[1]}</h2><p class="d">${featured[2]}</p><span class="btn">${featured[3]} →</span></a>` : ''}
-${cards.map(([href, title, text]) => `    <a class="card" href="${href}"><h2>${title} →</h2><p>${text}</p></a>`).join('\n')}
-  </div>
-  <footer>
-    <div class="by">
-      <span>Built by</span>
-      <a href="https://concatenalabs.com" target="_blank" rel="noopener"><img src="/explorer/img/icons/concatena-labs.png" alt="Concatena Labs"></a>
-      <span>·</span>
-      <a href="https://sequentia.io" target="_blank" rel="noopener">sequentia.io</a>
-    </div>
-    Testnet only; assets carry no value.
-  </footer>
-</div></body></html>`
-
-const CARD = {
-  explorer: ['/explorer/', 'Block Explorer', 'Every Sequentia block, transaction and asset, and the Bitcoin testnet4 chain each block is anchored to.'],
-  wallet: ['/wallet/', 'Web Wallet', 'A wallet in your browser for BTC and every Sequentia asset: receive, send, trade and stake, with test coins one click away. Your keys stay on your device.'],
-  pools: ['/pools/', 'Staking Pools', 'Every block producer on the Sequentia network: the stake lent to it, how reliably it produces, and what it has committed on chain to paying the people who stake with it. Stake from the web wallet or Sequentia Core.'],
-  dex: ['/dex/', 'SeqDEX', 'The disintermediated exchange of the Sequentia testnet: pure Lightning swaps on the LNDEX, atomic on-chain and covenant orders, a confidential book, and a marketplace for Lightning channel liquidity. Connect the web wallet or Ambra browser to trade.'],
-  faucet: ['/faucet', 'Faucet', 'Free test coins: BTC, tSEQ and the sample assets (USDX, EURX, GOLD, SILVR, OILX), paid to your web wallet\'s receive code or to any Sequentia address. The web wallet has it built in.'],
-  emissio: ['/emissio/', 'Emissio Rewards', 'The community issue register: earn Sequence tokens (SEQ), paid at mainnet launch, for completing testnet tasks, winning competitions and reporting vulnerabilities.'],
-  bridge: ['/bridge/', 'Compages Bridge', 'Bridge into the Sequentia network from Ethereum (Sepolia: ether or any ERC-20), Bitcoin (testnet4: BTC to SBTC) and Solana (devnet: SOL or any SPL token); a deposit mints a Sequentia asset, a return releases the original.'],
-  lending: ['/lending/', 'Pignus Lending', 'Borrow one issued asset against another, with the loan’s terms compiled into a covenant the network enforces: nobody holds your collateral, nobody can change the deal after you agree it, and repaying needs no one’s permission. Native Bitcoin can be the collateral too, on the parent chain, bound to the debt by an adaptor signature rather than a covenant.'],
-  levo: ['/levo/', 'Levo Launchpad', 'Back new projects on Sequentia, or raise funds for your own: staked Sequence sets how much you can put into a sale, and a covenant holds the project\'s tokens from the moment they are locked until a buyer\'s transaction pays the treasury and takes them, in one step.'],
-  seqpal: ['/seqpal/', 'SeqPal Issuance', 'Tokenize and service compliant securities on Sequentia: structure an offering, issue a restricted asset whose transfer rules the policy server enforces at co-sign, and run the transfer-agent lifecycle. A proof of concept.'],
-  seqpalId: ['/seqpal/id', 'SeqPal ID', 'One verified identity for issuing and holding SeqPal-managed restricted assets: create a SeqPal ID, carry your eligibility categories, and use them wherever these assets are accepted.'],
-  downloads: ['/download/', 'Downloads', 'Every app to install: Sequentia Core, the full node and desktop wallet; Fulmen, a desktop Lightning wallet with a SeqLN node; Seqognito, for mixing; Ambra mobile and Ambra browser, the Bitcoin and Sequentia wallet for Android and Chromium; and the Pignus CLI.'],
-  liquidity: ['/liquidity', 'Inbound Liquidity', 'The coins the room-to-receive service lends to wallets so they can receive over Lightning: what is free to sell, what is locked in channels, what it has earned, and the demand it turned away.'],
-  coreDownload: ['/download/core/', 'Download Sequentia Core', 'The full node and desktop wallet, for Linux and Windows. It validates the chain for itself and is the software a block producer runs.'],
-}
-
-// The public front door.
-const ROOT_HTML = menuPage({
-  featured: ['/wallet/', 'Web Wallet', 'A wallet in your browser for BTC and every Sequentia asset: receive, send, trade and stake. Take test coins from its faucet card; there is nothing to install, and your keys stay on your device.', 'Open the web wallet'],
-  cards: [CARD.faucet, CARD.explorer, CARD.emissio, CARD.bridge, CARD.pools, CARD.coreDownload],
-})
-// Every product the box serves, at a path nothing links to. noindex keeps a
-// search engine from turning an unlinked page into a linked one.
-const FULL_MENU_HTML = menuPage({ noindex: true, cards: [
-  CARD.explorer, CARD.wallet, CARD.pools, CARD.dex, CARD.faucet, CARD.emissio, CARD.bridge,
-  CARD.lending, CARD.levo, CARD.seqpal, CARD.seqpalId, CARD.liquidity, CARD.downloads,
-] })
+// The two menu pages, the public front door at / and the unlinked full menu at /secretfullmenu,
+// are generated once at start-up by menus.js.
 
 app.get('/', (req, res) => res.type('html').send(ROOT_HTML))
 app.get('/secretfullmenu', (req, res) => res.type('html').send(FULL_MENU_HTML))

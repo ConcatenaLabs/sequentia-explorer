@@ -5,16 +5,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 
 const serve = readFileSync(new URL('./serve-public.js', import.meta.url), 'utf8')
 const page = readFileSync(new URL('./liquidity.html', import.meta.url), 'utf8')
+const { ROOT_HTML, FULL_MENU_HTML } = createRequire(import.meta.url)('./menus.js')
 
 test('the page is served at /liquidity, before the catch-all, and listed on the full menu only', () => {
   const route = serve.indexOf("app.get('/liquidity'"), catchAll = serve.indexOf("app.get('*'")
   assert.ok(route > 0 && route < catchAll)
-  const full = serve.slice(serve.indexOf('const FULL_MENU_HTML'), serve.indexOf("app.get('/',"))
-  assert.match(full, /CARD\.liquidity/)
-  assert.ok(!/CARD\.liquidity/.test(serve.slice(serve.indexOf('const ROOT_HTML'), serve.indexOf('const FULL_MENU_HTML'))))
+  assert.match(FULL_MENU_HTML, /href="\/liquidity"/)
+  assert.ok(!ROOT_HTML.includes('href="/liquidity"'))
 })
 
 test('it reads the LSP public stats and writes them as text', () => {

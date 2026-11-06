@@ -587,15 +587,17 @@ app.get('/ark-index/tx/:txid', (req, res) => {
 })
 
 // The two menu pages. The site root is the public front door: the network's
-// one-line description, one step to start with (open the web wallet and take
-// test coins), then seven cards in the order a newcomer needs them: the web
-// wallet, the faucet, the explorer, Emissio, the Compages bridge, the staking
-// pools and the Sequentia Core download. Everything else the box serves is listed on the
+// one-line description, then the cards in the order a newcomer needs them. The
+// first, the web wallet, is the featured card: it is where a newcomer starts
+// (open it, take test coins from its faucet card), so it is highlighted and
+// carries the button, rather than appearing twice. Then the faucet, the
+// explorer, Emissio, the Compages bridge, the staking pools and the Sequentia
+// Core download. Everything else the box serves is listed on the
 // full menu at /secretfullmenu, which nothing links to: it is for people who
 // have been given the path. The product paths themselves are unchanged, since
 // the wallets, the extension and the nodes carry them hardcoded. One shell
 // renders both, so they are the same page with a different list.
-const menuPage = ({ cards, noindex, start }) => `<!doctype html><html lang="en"><head><meta charset="utf-8">
+const menuPage = ({ cards, noindex, featured }) => `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sequentia: testnet demo server</title>${noindex ? '\n<meta name="robots" content="noindex">' : ''}
 <link rel="icon" href="/explorer/img/icons/SequentiaTestnet-menu-logo.svg">
@@ -611,11 +613,12 @@ const menuPage = ({ cards, noindex, start }) => `<!doctype html><html lang="en">
   a.card{display:block;text-decoration:none;color:inherit;background:#171b21;border:1px solid #262b33;border-radius:12px;padding:20px 22px;transition:border-color .15s,transform .05s}
   a.card:hover{border-color:#f5b301;transform:translateY(-1px)}
   .card h2{margin:0 0 4px;font-size:19px;color:#fff} .card p{margin:0;color:#9aa0a6;font-size:14px}
-  .start{background:#1d1a0e;border:1px solid #f5b301;border-radius:12px;padding:20px 22px;margin:0 0 28px}
-  .start .k{margin:0 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#f5b301;font-weight:600}
-  .start p{margin:0 0 14px;color:#e8eaed}
-  .start a{display:inline-block;background:#f5b301;color:#0f1216;font-weight:600;text-decoration:none;border-radius:8px;padding:10px 18px}
-  .start a:hover{background:#ffc933}
+  a.card.featured{background:#1d1a0e;border-color:#f5b301;padding:22px 24px}
+  a.card.featured:hover{border-color:#ffc933}
+  .featured .k{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#f5b301;font-weight:600}
+  .featured h2{font-size:21px} .featured p.d{color:#e8eaed;font-size:15px;margin:0 0 16px}
+  .featured .btn{display:inline-block;background:#f5b301;color:#0f1216;font-weight:600;border-radius:8px;padding:10px 18px}
+  a.card.featured:hover .btn{background:#ffc933}
   footer{margin-top:32px;border-top:1px solid #262b33;padding-top:20px;color:#6b7280;font-size:13px}
   .by{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
   .by span{color:#9aa0a6} .by a{color:#f5b301;text-decoration:none} .by a:hover{text-decoration:underline}
@@ -625,13 +628,9 @@ const menuPage = ({ cards, noindex, start }) => `<!doctype html><html lang="en">
     <img src="/explorer/img/icons/SequentiaTestnet-menu-logo.svg" alt="Sequentia">
     <h1>Sequentia <span class="t">testnet</span></h1>
   </div>
-  <p class="sub">A Bitcoin sidechain for asset tokenization and disintermediated exchanges. This is its public testnet.</p>${start ? `
-  <div class="start">
-    <p class="k">Start here</p>
-    <p>${start[1]}</p>
-    <a href="${start[0]}">${start[2]} →</a>
-  </div>` : ''}
-  <div class="grid">
+  <p class="sub">A Bitcoin sidechain for asset tokenization and disintermediated exchanges. This is its public testnet.</p>
+  <div class="grid">${featured ? `
+    <a class="card featured" href="${featured[0]}"><p class="k">Start here</p><h2>${featured[1]}</h2><p class="d">${featured[2]}</p><span class="btn">${featured[3]} →</span></a>` : ''}
 ${cards.map(([href, title, text]) => `    <a class="card" href="${href}"><h2>${title} →</h2><p>${text}</p></a>`).join('\n')}
   </div>
   <footer>
@@ -664,8 +663,8 @@ const CARD = {
 
 // The public front door.
 const ROOT_HTML = menuPage({
-  start: ['/wallet/', 'Open the web wallet and take test coins from its faucet card. It runs in your browser, with nothing to install.', 'Open the web wallet'],
-  cards: [CARD.wallet, CARD.faucet, CARD.explorer, CARD.emissio, CARD.bridge, CARD.pools, CARD.coreDownload],
+  featured: ['/wallet/', 'Web Wallet', 'A wallet in your browser for BTC and every Sequentia asset: receive, send, trade and stake. Take test coins from its faucet card; there is nothing to install, and your keys stay on your device.', 'Open the web wallet'],
+  cards: [CARD.faucet, CARD.explorer, CARD.emissio, CARD.bridge, CARD.pools, CARD.coreDownload],
 })
 // Every product the box serves, at a path nothing links to. noindex keeps a
 // search engine from turning an unlinked page into a linked one.

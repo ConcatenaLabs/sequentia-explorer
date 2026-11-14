@@ -41,7 +41,7 @@ Everything upstream Esplora shows (blocks, transactions, addresses, script
 details, mempool), plus Sequentia-specific views:
 
 - **Bitcoin anchor per block.** Every Sequentia block commits to a Bitcoin
-  testnet4 block header; the block page shows the anchor's height and how many
+  testnet4 block header; the block page shows the anchor's height, its full hash and how many
   Bitcoin blocks deep it is, and links it to the built-in testnet4 explorer,
   so you can follow a Sequentia block down to its Bitcoin anchor in one click
   (`esplora/client/src/views/block.js`).

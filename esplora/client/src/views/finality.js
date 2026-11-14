@@ -35,6 +35,10 @@ export const finalityRows = (status, self, t) => {
       <div className="mono">
         {linkToParentBlock(a.hash, `#${a.height}`)}{' '}
         <span className="text-gray">{deep(a.depth, t)}</span>
+        {/* The hash itself, in full: it is what a tester copies to name the
+            anchor, and a height alone does not identify a block while
+            testnet4 runs competing branches. */}
+        <div className="seq-anchor-hash text-gray">{a.hash}</div>
       </div>
     </div>
   ].filter(Boolean)

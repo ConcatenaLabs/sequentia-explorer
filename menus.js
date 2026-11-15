@@ -43,7 +43,7 @@ const ICON = {
 // the label used when it is the featured destination.
 const DEST = {
   wallet: { href: '/wallet/', name: 'Web wallet', icon: 'wallet', button: 'Open the web wallet',
-    line: 'Hold, send, trade and stake BTC and every Sequentia asset.' },
+    line: 'Hold, send and trade BTC and every Sequentia asset.' },
   faucet: { href: '/faucet', name: 'Faucet', icon: 'drop', line: 'Free test BTC and Sequentia assets for any wallet.' },
   bridge: { href: '/bridge/', name: 'Compages', icon: 'bridge', line: 'Bring assets in from Ethereum, Bitcoin and Solana.' },
   explorer: { href: '/explorer/', name: 'Block explorer', icon: 'search', line: 'Look up any block, transaction or asset.' },

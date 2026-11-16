@@ -12,6 +12,7 @@ const express = require('express')
 const { intersectAtMinimum, combineFeeInfo } = require('./feerates')
 const { competingBranches } = require('./parent-forks')
 const { ROOT_HTML, FULL_MENU_HTML } = require('./menus')
+const { pricesRoute } = require('./prices-route')
 const http = require('http')
 const path = require('path')
 
@@ -19,7 +20,8 @@ const DIST = path.join(__dirname, 'esplora', 'dist')
 const SEQ_ELECTRS = process.env.SEQ_ELECTRS || '127.0.0.1:3003'
 const T4_ELECTRS = process.env.T4_ELECTRS || '127.0.0.1:3004'
 const SEQ_REGISTRY = process.env.SEQ_REGISTRY || '127.0.0.1:3005' // Sequentia Asset Registry
-const SEQ_PRICES = process.env.SEQ_PRICES || '127.0.0.1:8088'      // market-data feed (per-asset base prices)
+const SEQ_PRICES = process.env.SEQ_PRICES || '127.0.0.1:8088'      // price source (per-asset base prices)
+const SEQ_PRICES_PATH = process.env.SEQ_PRICES_PATH || '/prices'     // its path (the price server's is /api/prices)
 const SEQ_DEX = process.env.SEQ_DEX || '127.0.0.1:9945'           // SeqDEX daemon (Trade + cross-chain Xchain /v1/*)
 const SEQ_SEQOB = process.env.SEQ_SEQOB || '127.0.0.1:9955'       // SeqOB order-book relay (/v1/offers, orderbook, /v1/lift) + WS /v1/ws
 // THE OTHER RELAYS THE UNIFIED BOOK MERGES. The book shows offers from several
@@ -142,10 +144,10 @@ app.use('/api', proxyTo(SEQ_ELECTRS))
 // upstream sees /index.minimal.json, /<assetid>, /health, POST /, etc.
 app.use('/registry', proxyTo(SEQ_REGISTRY))
 
-// Market-data feed (per-asset base/USD prices), used by all UIs for the
+// Prices (per-asset base/USD prices, keyed by market symbol AND registry ticker), used by all UIs for the
 // user-chosen reference-currency valuation. A direct route (not a mount) so the
 // path is NOT stripped: GET /prices -> upstream /prices. Public, read-only.
-app.get('/prices', proxyTo(SEQ_PRICES))
+app.get('/prices', pricesRoute(SEQ_PRICES, SEQ_PRICES_PATH))
 
 // SeqDEX daemon: same-origin /dex -> :9945. Mount strips /dex, so the upstream
 // sees /v1/markets, /v1/trade/*, /v1/xchain/* (and the reverse /v1/xchain/reverse/*).

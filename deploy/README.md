@@ -24,7 +24,8 @@ https://sequentiatestnet.com behind a Caddy reverse proxy.
    | `SEQ_ELECTRS` | `127.0.0.1:3003` | `/api` (Sequentia Esplora REST) |
    | `T4_ELECTRS` | `127.0.0.1:3004` | `/testnet4/api` (Bitcoin testnet4 Esplora REST) |
    | `SEQ_REGISTRY` | `127.0.0.1:3005` | `/registry` (Asset Registry) |
-   | `SEQ_PRICES` | `127.0.0.1:8088` | `/prices` (market-data feed) |
+   | `SEQ_PRICES` | `127.0.0.1:8088` | `/prices` (the price source, read at `SEQ_PRICES_PATH`, cached 10 s) |
+   | `SEQ_PRICES_PATH` | `/prices` | the path on `SEQ_PRICES` that `/prices` serves; the price server's is `/api/prices` |
    | `SEQ_DEX` | `127.0.0.1:9945` | `/dex` (SeqDEX daemon) |
    | `SEQ_SEQOB` | `127.0.0.1:9955` | `/seqob` (SeqOB order-book relay, HTTP + WebSocket) |
    | `SEQ_SEQOB_PLN` | `127.0.0.1:9965` | `/seqob-pln` (submarine + pure-Lightning relay, HTTP + WebSocket) |

@@ -49,8 +49,10 @@ test('the featured destination is an argument: moving it keeps every destination
 
 test('the front page names no hidden product; the full menu is noindex and the front page is not', () => {
   const t = text(ROOT_HTML)
-  for (const name of ['Ambra', 'SeqDEX', 'Fulmen', 'SeqLN', 'Pignus', 'Levo', 'SeqPal', 'Seqognito', 'Lightning', 'Arca'])
+  // Ambra for Android is public, on the download page the front page links; the browser extension is not.
+  for (const name of ['Ambra browser', 'extension', 'SeqDEX', 'Fulmen', 'SeqLN', 'Pignus', 'Levo', 'SeqPal', 'Seqognito', 'Lightning', 'Arca'])
     assert.ok(!t.includes(name), name)
+  assert.match(t, /Sequentia Core and Ambra/)
   assert.match(FULL_MENU_HTML, /<meta name="robots" content="noindex">/)
   assert.ok(!ROOT_HTML.includes('noindex'))
 })

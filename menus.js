@@ -10,7 +10,8 @@
 // row that lists it, so changing the argument moves it without touching the rows.
 //
 // The front page is public and names only the public products: the web wallet, the faucet, the
-// explorer, Emissio, the Compages bridge, the staking pools and the Sequentia Core download. The
+// explorer, Emissio, the Compages bridge, the staking pools and the public download page (Sequentia
+// Core and Ambra for Android). The
 // full menu lists everything the box serves; nothing links to it, and noindex keeps a search engine
 // from turning an unlinked page into a linked one. The paths themselves never change, since the
 // wallets, the extension and the nodes carry them hardcoded.
@@ -50,7 +51,7 @@ const DEST = {
   pools: { href: '/pools/', name: 'Staking pools', icon: 'layers', line: 'Compare block producers and pick one to stake with.' },
   emissio: { href: '/emissio/', name: 'Emissio', icon: 'star', button: 'Open Emissio',
     line: 'Earn the Sequence token (SEQ) by testing the network.' },
-  core: { href: '/download/core/', name: 'Sequentia Core', icon: 'server', line: 'Download the full node and desktop wallet.' },
+  core: { href: '/download/core/', name: 'Sequentia Core and Ambra', icon: 'server', line: 'Download the full node, or the Android wallet.' },
   dex: { href: '/dex/', name: 'SeqDEX', icon: 'swap', line: 'Swap BTC and assets directly with other people.' },
   lending: { href: '/lending/', name: 'Pignus', icon: 'percent', line: 'Borrow one asset against another.' },
   levo: { href: '/levo/', name: 'Levo', icon: 'rise', line: 'Back new projects, or raise funds for your own.' },
@@ -157,7 +158,7 @@ const ROOT = {
   featured: 'emissio',
   groups: [
     ['Wallet and test coins', ['wallet', 'faucet', 'bridge']],
-    ['Explore, stake and run a node', ['explorer', 'pools', 'core']],
+    ['Explore, stake and download', ['explorer', 'pools', 'core']],
     ['Earn', ['emissio']],
   ],
 }

@@ -27,10 +27,11 @@ node serve-public.js            # default :8080
 automated tests are:
 
 ```sh
-node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs ark-index.test.mjs menus.test.mjs
+node --test feerates.test.mjs parent-forks.test.mjs chainstatus.test.mjs contract-labels.test.mjs liquidity-page.test.mjs ark-index.test.mjs menus.test.mjs prices-route.test.mjs
 ```
 
-`feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `parent-forks.test.mjs` covers
+`prices-route.test.mjs` covers `prices-route.js`, the cached `/prices` route (it reads
+`SEQ_PRICES_PATH` on `SEQ_PRICES` and forwards no other path). `feerates.test.mjs` covers `intersectAtMinimum` in `feerates.js`; `parent-forks.test.mjs` covers
 `competingBranches` in `parent-forks.js`; `chainstatus.test.mjs` covers the chain verdict in
 `chainstatus.js`; `menus.test.mjs` covers the two menu pages in `menus.js` (every path stays, the
 featured destination is linked once, the front page names no hidden product); `contract-labels.test.mjs`
